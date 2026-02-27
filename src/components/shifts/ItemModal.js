@@ -1,11 +1,67 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Btn, Input, Select } from '../UIComponents';
 import { formatCurrency } from '../../utils/helpers';
 import { PAYMENT_METHODS, PRODUCTS_LIST } from '../../utils/constants';
+import { useAllClients } from '../../hooks/useAllClients';
+import ClientAutocomplete from '../credits/ClientAutocomplete';
+import { useApp } from '../../context/AppContext';
+
+const DupWarning = ({ msg }) => (
+  <div style={{
+    color: '#fbbf24', background: '#1a1200', border: '1px solid #713f12',
+    borderRadius: 6, padding: '7px 10px', fontSize: 12, marginTop: -8, marginBottom: 10,
+  }}>
+    ⚠️ {msg} — ¿Deseas continuar?
+  </div>
+);
+
+// ============================================
+// COMPONENTE: ItemModal
+// Modal para agregar / editar ítems de turno:
+// pagos, créditos, promociones, descuentos.
+// - Créditos y descuentos: cliente en MAYÚSCULAS
+//   con autocompletado de clientes registrados.
+// - Vale y factura siempre en MAYÚSCULAS.
+// ============================================
 
 const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, handleModalDelete, prices, isGLP }) => {
-  const productOptions = (isGLP ? PRODUCTS_LIST : PRODUCTS_LIST.filter(p => p !== 'GLP'))
+  const productOptions = (isGLP ? PRODUCTS_LIST : PRODUCTS_LIST.filter((p) => p !== 'GLP'))
     .map((p) => ({ value: p, label: p }));
+
+  const allClients = useAllClients();
+  const { shifts, creditImports } = useApp();
+
+  // Detectar vales/facturas duplicados (solo en créditos)
+  const voucherDup = useMemo(() => {
+    if (itemModal?.type !== 'credit') return null;
+    const v = (itemModal?.data?.voucher || '').trim().toUpperCase();
+    if (!v) return null;
+    for (const s of shifts) {
+      for (const c of (s.credits || [])) {
+        if ((c.voucher || '').toUpperCase() === v) return `Vale ya registrado en turno del ${s.date} — ${s.worker || ''}`;
+      }
+    }
+    for (const imp of (creditImports || [])) {
+      if ((imp.voucher || '').toUpperCase() === v) return `Vale ya registrado en crédito importado de ${(imp.clientName || '').toUpperCase()}`;
+    }
+    return null;
+  }, [itemModal?.data?.voucher, itemModal?.type, shifts, creditImports]);
+
+  const invoiceDup = useMemo(() => {
+    if (itemModal?.type !== 'credit') return null;
+    const inv = (itemModal?.data?.invoice || '').trim().toUpperCase();
+    if (!inv) return null;
+    for (const s of shifts) {
+      for (const c of (s.credits || [])) {
+        if ((c.invoice || '').toUpperCase() === inv) return `Factura ya registrada en turno del ${s.date} — ${s.worker || ''}`;
+      }
+    }
+    for (const imp of (creditImports || [])) {
+      if ((imp.invoice || '').toUpperCase() === inv) return `Factura ya registrada en crédito importado de ${(imp.clientName || '').toUpperCase()}`;
+    }
+    return null;
+  }, [itemModal?.data?.invoice, itemModal?.type, shifts, creditImports]);
+
   if (!itemModal) return null;
 
   return (
@@ -14,15 +70,15 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
         <div className="modal-header">
           <div className="modal-title">
             {itemModal.idx === -1 ? '➕ Agregar' : '✏️ Editar'}{' '}
-            {itemModal.type === 'payment' && `Pago — ${itemModal.data.method}`}
-            {itemModal.type === 'credit' && `Crédito — ${itemModal.data.product}`}
-            {itemModal.type === 'promo' && `Promoción — ${itemModal.data.product}`}
+            {itemModal.type === 'payment'  && `Pago — ${itemModal.data.method}`}
+            {itemModal.type === 'credit'   && `Crédito — ${itemModal.data.product}`}
+            {itemModal.type === 'promo'    && `Promoción — ${itemModal.data.product}`}
             {itemModal.type === 'discount' && `Descuento — ${itemModal.data.product}`}
           </div>
           <Btn variant="ghost" className="btn-icon" onClick={() => setItemModal(null)}>✕</Btn>
         </div>
 
-        {/* ---- Campos: PAGO ---- */}
+        {/* ── PAGO ── */}
         {itemModal.type === 'payment' && (
           <div>
             <Select label="MÉTODO DE PAGO" value={itemModal.data.method}
@@ -33,7 +89,7 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
               onChange={(e) => setModalField('reference', e.target.value)} />
             <Input label="N° Factura (opcional)" value={itemModal.data.invoice}
               placeholder="Ej: F001-123"
-              onChange={(e) => setModalField('invoice', e.target.value)} />
+              onChange={(e) => setModalField('invoice', e.target.value.toUpperCase())} />
             <Input label="💰 Monto recibido (S/)" type="number" value={itemModal.data.amount}
               placeholder="0.00"
               onChange={(e) => setModalField('amount', e.target.value)}
@@ -41,23 +97,32 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
           </div>
         )}
 
-        {/* ---- Campos: CRÉDITO ---- */}
+        {/* ── CRÉDITO ── */}
         {itemModal.type === 'credit' && (
           <div>
             <Select label="PRODUCTO" value={itemModal.data.product}
               onChange={(e) => setModalField('product', e.target.value)}
               options={productOptions} />
-            <Input label="Cliente / Empresa" value={itemModal.data.client}
+
+            {/* Cliente con autocompletado y MAYÚSCULAS */}
+            <ClientAutocomplete
+              label="CLIENTE / EMPRESA"
+              value={itemModal.data.client}
+              onChange={(v) => setModalField('client', v)}
+              allClients={allClients}
               placeholder="Nombre del cliente"
-              onChange={(e) => setModalField('client', e.target.value)} />
-            <div className="grid-2">
-              <Input label="N° Vale" value={itemModal.data.voucher}
-                placeholder="Ej: V-001"
-                onChange={(e) => setModalField('voucher', e.target.value)} />
-              <Input label="N° Factura (opcional)" value={itemModal.data.invoice}
-                placeholder="Ej: F002-001"
-                onChange={(e) => setModalField('invoice', e.target.value)} />
-            </div>
+            />
+
+            <Input label="N° VALE" value={itemModal.data.voucher}
+              placeholder="Ej: V-001"
+              onChange={(e) => setModalField('voucher', e.target.value.toUpperCase())}
+              style={{ textTransform: 'uppercase' }} />
+            {voucherDup && <DupWarning msg={voucherDup} />}
+            <Input label="N° FACTURA (opcional)" value={itemModal.data.invoice}
+              placeholder="Ej: F002-001"
+              onChange={(e) => setModalField('invoice', e.target.value.toUpperCase())}
+              style={{ textTransform: 'uppercase' }} />
+            {invoiceDup && <DupWarning msg={invoiceDup} />}
             <Input label="⛽ Galones despachados" type="number" value={itemModal.data.gallons}
               placeholder="0.000"
               onChange={(e) => setModalField('gallons', e.target.value)}
@@ -70,7 +135,7 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
           </div>
         )}
 
-        {/* ---- Campos: PROMOCIÓN ---- */}
+        {/* ── PROMOCIÓN ── */}
         {itemModal.type === 'promo' && (
           <div>
             <Select label="PRODUCTO" value={itemModal.data.product}
@@ -78,7 +143,8 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
               options={productOptions} />
             <Input label="DNI o Placa del vehículo" value={itemModal.data.dniPlate}
               placeholder="Ej: ABC-123 o 12345678"
-              onChange={(e) => setModalField('dniPlate', e.target.value)} />
+              onChange={(e) => setModalField('dniPlate', e.target.value.toUpperCase())}
+              style={{ textTransform: 'uppercase' }} />
             <Input label="⛽ Galones entregados" type="number" value={itemModal.data.gallons}
               placeholder="0.000"
               onChange={(e) => setModalField('gallons', e.target.value)}
@@ -91,15 +157,22 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
           </div>
         )}
 
-        {/* ---- Campos: DESCUENTO ---- */}
+        {/* ── DESCUENTO ── */}
         {itemModal.type === 'discount' && (
           <div>
             <Select label="PRODUCTO" value={itemModal.data.product}
               onChange={(e) => setModalField('product', e.target.value)}
               options={productOptions} />
-            <Input label="Cliente / Empresa" value={itemModal.data.client}
+
+            {/* Cliente con autocompletado y MAYÚSCULAS */}
+            <ClientAutocomplete
+              label="CLIENTE / EMPRESA"
+              value={itemModal.data.client}
+              onChange={(v) => setModalField('client', v)}
+              allClients={allClients}
               placeholder="Nombre del cliente"
-              onChange={(e) => setModalField('client', e.target.value)} />
+            />
+
             <div className="grid-2">
               <Input label="⛽ Galones vendidos" type="number" value={itemModal.data.gallons}
                 placeholder="0.000"
@@ -123,7 +196,7 @@ const ItemModal = ({ itemModal, setItemModal, setModalField, handleModalSave, ha
           </div>
         )}
 
-        {/* Botones de acción */}
+        {/* Botones */}
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           {itemModal.idx !== -1 && (
             <Btn variant="danger" style={{ padding: '12px 16px', flexShrink: 0 }}

@@ -4,11 +4,11 @@ import {
   calcSalesByProduct, sumField, sumArray,
   createEmptyShift, getCarryoverMeters,
 } from '../utils/helpers';
-import { ISLANDS_CONFIG, SHIFT_OPTIONS } from '../utils/constants';
+import { ISLANDS_CONFIG, SHIFT_OPTIONS, getCurrentDayOfWeek } from '../utils/constants';
 
 export function useWorkerShift() {
   const {
-    currentUser, shifts, addShift, updateShift, closeShift,
+    currentUser, shifts, schedules, addShift, updateShift, closeShift,
     prices, lastClosedShift, setLastClosedShift,
   } = useApp();
 
@@ -120,6 +120,15 @@ export function useWorkerShift() {
     }));
   };
 
+  // ---- HORARIO ASIGNADO HOY ----
+  // Si el admin configuró un horario para hoy, se usan esos valores (bloqueados).
+  const todaySchedule = useMemo(() => {
+    const today = getCurrentDayOfWeek();
+    const workerSchedule = schedules.find((s) => s.workerId === currentUser.id);
+    if (!workerSchedule) return null;
+    return workerSchedule.entries?.find((e) => e.day === today) || null;
+  }, [schedules, currentUser.id]);
+
   // ---- FORMULARIO DE INICIO ----
   const [startForm, setStartForm] = useState({
     island: ISLANDS_CONFIG[0].id.toString(),
@@ -127,16 +136,20 @@ export function useWorkerShift() {
     shift: 'Mañana',
   });
 
+  // Valores efectivos: se usan los del horario asignado si existen, sino los del formulario libre
+  const effectiveIsland = todaySchedule ? todaySchedule.island : startForm.island;
+  const effectiveShift  = todaySchedule ? todaySchedule.shift  : startForm.shift;
+
   const carryoverMeters = useMemo(
-    () => getCarryoverMeters(shifts, startForm.island),
-    [shifts, startForm.island]
+    () => getCarryoverMeters(shifts, effectiveIsland),
+    [shifts, effectiveIsland]
   );
 
   const existingSlotConflict = useMemo(() =>
     shifts.some(
-      (s) => s.island === startForm.island && s.date === startForm.date && s.shift === startForm.shift
+      (s) => s.island === effectiveIsland && s.date === startForm.date && s.shift === effectiveShift
     ),
-    [shifts, startForm]
+    [shifts, effectiveIsland, startForm.date, effectiveShift]
   );
 
   const shiftsForSelectedDate = useMemo(
@@ -192,9 +205,9 @@ export function useWorkerShift() {
     addShift({
       ...emptyShift,
       worker: currentUser.name,
-      island: startForm.island,
+      island: effectiveIsland,
       date: startForm.date,
-      shift: startForm.shift,
+      shift: effectiveShift,
       meters,
       hasCarryover: Object.keys(carryoverMeters).length > 0,
     });
@@ -212,6 +225,7 @@ export function useWorkerShift() {
     currentUser, shift, prices, islandConfig,
     activeTab, setActiveTab,
     startForm, setStartForm,
+    todaySchedule, effectiveIsland, effectiveShift,
     confirmClose, setConfirmClose,
     itemModal, setItemModal, setModalField, handleModalSave, handleModalDelete,
     handleConfirmClose, handleStartShift,

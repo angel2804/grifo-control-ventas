@@ -12,6 +12,9 @@ import LiveIslandPage from './pages/LiveIslandPage';
 import VerifyReportPage from './pages/VerifyReportPage';
 import VerifiedReportsPage from './pages/VerifiedReportsPage';
 import BackupsPage from './pages/BackupsPage';
+import SchedulePage from './pages/SchedulePage';
+import WorkerSchedulePage from './pages/WorkerSchedulePage';
+import CreditsPage from './pages/CreditsPage';
 
 // ============================================
 // COMPONENTE PRINCIPAL: App
@@ -63,12 +66,18 @@ const AppContent = () => {
         return isAdmin ? <VerifiedReportsPage /> : null;
       case 'backups':
         return isAdmin ? <BackupsPage /> : null;
+      case 'schedule':
+        return isAdmin ? <SchedulePage /> : null;
+      case 'credits':
+        return isAdmin ? <CreditsPage /> : null;
 
       // Páginas solo para GRIFERO
       case 'shift':
         return !isAdmin ? <WorkerShiftPage /> : null;
       case 'myreports':
         return !isAdmin ? <ReportsPage filterWorker={currentUser.name} /> : null;
+      case 'mySchedule':
+        return !isAdmin ? <WorkerSchedulePage /> : null;
 
       default:
         return isAdmin ? <ReportsPage /> : <WorkerShiftPage />;

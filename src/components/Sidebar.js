@@ -33,18 +33,21 @@ const Sidebar = () => {
   const adminPages = [
     { key: 'live',     label: 'Vista en Vivo',  icon: '🔴' },
     { key: 'reports',  label: 'Reportes',        icon: '📊' },
+    { key: 'credits',  label: 'Créditos',        icon: '💳' },
     { key: 'verified', label: 'Verificados',     icon: '✅' },
     { key: 'prices',   label: 'Precios',         icon: '💲' },
     { key: 'meters',   label: 'Contómetros',     icon: '⛽' },
     { key: 'users',    label: 'Usuarios',        icon: '👤' },
+    { key: 'schedule', label: 'Horarios',        icon: '📅' },
     { key: 'shifts',   label: 'Turnos',          icon: '📋' },
     { key: 'backups',  label: 'Copias de Seguridad', icon: '💾' },
   ];
 
   // Menú para grifero (sin Dashboard)
   const workerPages = [
-    { key: 'shift',     label: 'Mi Turno',     icon: '⛽' },
-    { key: 'myreports', label: 'Mis Reportes', icon: '📊' },
+    { key: 'shift',      label: 'Mi Turno',    icon: '⛽' },
+    { key: 'mySchedule', label: 'Mi Horario',  icon: '📅' },
+    { key: 'myreports',  label: 'Mis Reportes',icon: '📊' },
   ];
 
   const pages = isAdmin ? adminPages : workerPages;

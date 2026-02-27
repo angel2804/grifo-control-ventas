@@ -1,10 +1,19 @@
 import React from 'react';
 import { Card, Btn, Input, Select } from '../UIComponents';
-import { ISLANDS_CONFIG, SHIFT_OPTIONS } from '../../utils/constants';
+import { ISLANDS_CONFIG, SHIFT_OPTIONS, getCurrentDayOfWeek } from '../../utils/constants';
+
+// ============================================
+// COMPONENTE: ShiftStartForm
+// Formulario para iniciar turno.
+// Si hay horario asignado (todaySchedule), los campos de isla/turno/fecha se bloquean.
+// ============================================
 
 const ShiftStartForm = ({
   currentUser,
   startForm, setStartForm,
+  todaySchedule,
+  effectiveIsland,
+  effectiveShift,
   carryoverMeters,
   existingSlotConflict,
   isDayFull,
@@ -13,6 +22,10 @@ const ShiftStartForm = ({
   handleStartShift,
 }) => {
   const hasCarryover = Object.keys(carryoverMeters).length > 0;
+  const hasSchedule = !!todaySchedule;
+
+  const islandConfig = ISLANDS_CONFIG.find((i) => i.id.toString() === effectiveIsland);
+  const today = getCurrentDayOfWeek();
 
   return (
     <div>
@@ -24,32 +37,61 @@ const ShiftStartForm = ({
             Bienvenido, {currentUser.name}
           </div>
           <p className="text-muted" style={{ marginBottom: 24 }}>
-            No tienes un turno activo. Llena el formulario y pulsa el botón para iniciar.
+            {hasSchedule
+              ? 'Tu turno de hoy está asignado. Revisa los datos y pulsa el botón para iniciar.'
+              : 'No tienes un turno activo. Llena el formulario y pulsa el botón para iniciar.'}
           </p>
         </div>
 
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <Select
-            label="ISLA ASIGNADA"
-            value={startForm.island}
-            onChange={(e) => setStartForm({ ...startForm, island: e.target.value })}
-            options={ISLANDS_CONFIG.map((i) => ({ value: i.id.toString(), label: i.name }))}
-          />
-          <div className="grid-2">
-            <Input
-              label="FECHA"
-              type="date"
-              value={startForm.date}
-              min={new Date().toLocaleDateString('en-CA')}
-              onChange={(e) => setStartForm({ ...startForm, date: e.target.value })}
-            />
-            <Select
-              label="TURNO"
-              value={startForm.shift}
-              onChange={(e) => setStartForm({ ...startForm, shift: e.target.value })}
-              options={SHIFT_OPTIONS}
-            />
-          </div>
+
+          {/* ── Modo HORARIO ASIGNADO: campos bloqueados ── */}
+          {hasSchedule ? (
+            <>
+              {/* Banner de horario asignado */}
+              <div style={{
+                padding: '14px 18px', borderRadius: 10, marginBottom: 16,
+                background: '#0f2d1f', border: '2px solid #16a34a',
+              }}>
+                <div style={{ color: '#4ade80', fontWeight: 800, fontSize: 13, marginBottom: 10, letterSpacing: '0.05em' }}>
+                  📅 TURNO ASIGNADO PARA HOY — {today.toUpperCase()}
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <LockedBadge icon={shiftIcon(effectiveShift)} label={effectiveShift} color="#93c5fd" />
+                  <LockedBadge icon="⛽" label={islandConfig?.name || `Isla ${effectiveIsland}`} color="#60a5fa" />
+                  <LockedBadge icon="📆" label={startForm.date} color="#a3e635" />
+                </div>
+                <div style={{ color: '#6ee7b7', fontSize: 12, marginTop: 10 }}>
+                  🔒 Estos datos fueron asignados por el administrador y no pueden modificarse.
+                </div>
+              </div>
+            </>
+          ) : (
+            /* ── Modo LIBRE: formulario editable (comportamiento anterior) ── */
+            <>
+              <Select
+                label="ISLA ASIGNADA"
+                value={startForm.island}
+                onChange={(e) => setStartForm({ ...startForm, island: e.target.value })}
+                options={ISLANDS_CONFIG.map((i) => ({ value: i.id.toString(), label: i.name }))}
+              />
+              <div className="grid-2">
+                <Input
+                  label="FECHA"
+                  type="date"
+                  value={startForm.date}
+                  min={new Date().toLocaleDateString('en-CA')}
+                  onChange={(e) => setStartForm({ ...startForm, date: e.target.value })}
+                />
+                <Select
+                  label="TURNO"
+                  value={startForm.shift}
+                  onChange={(e) => setStartForm({ ...startForm, shift: e.target.value })}
+                  options={SHIFT_OPTIONS}
+                />
+              </div>
+            </>
+          )}
 
           {/* Contador de turnos del día */}
           <div style={{
@@ -92,11 +134,11 @@ const ShiftStartForm = ({
                 ⚠️ Turno ya registrado
               </div>
               <div style={{ color: '#f87171', fontSize: 13 }}>
-                Ya existe un turno de <strong style={{ color: '#fca5a5' }}>{startForm.shift}</strong> para{' '}
+                Ya existe un turno de <strong style={{ color: '#fca5a5' }}>{effectiveShift}</strong> para{' '}
                 <strong style={{ color: '#fca5a5' }}>
-                  {ISLANDS_CONFIG.find((i) => i.id.toString() === startForm.island)?.name || `Isla ${startForm.island}`}
+                  {islandConfig?.name || `Isla ${effectiveIsland}`}
                 </strong>{' '}
-                el {startForm.date}. Elige otra isla o turno.
+                el {startForm.date}.{hasSchedule ? ' Comunícate con el administrador para corregir el horario.' : ' Elige otra isla o turno.'}
               </div>
             </div>
           )}
@@ -153,6 +195,26 @@ const ShiftStartForm = ({
       </Card>
     </div>
   );
+};
+
+// ── Badge de campo bloqueado ──
+const LockedBadge = ({ icon, label, color }) => (
+  <span style={{
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    padding: '5px 14px', borderRadius: 20,
+    background: '#0f172a', color: color || '#f1f5f9',
+    fontWeight: 700, fontSize: 14,
+    border: `1px solid ${color || '#334155'}`,
+  }}>
+    {icon} {label}
+  </span>
+);
+
+const shiftIcon = (shift) => {
+  if (shift === 'Mañana') return '🌅';
+  if (shift === 'Tarde')  return '☀️';
+  if (shift === 'Noche')  return '🌙';
+  return '⏰';
 };
 
 export default ShiftStartForm;

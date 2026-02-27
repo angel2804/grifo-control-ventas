@@ -33,6 +33,9 @@ const WorkerShiftPage = () => {
         currentUser={ws.currentUser}
         startForm={ws.startForm}
         setStartForm={ws.setStartForm}
+        todaySchedule={ws.todaySchedule}
+        effectiveIsland={ws.effectiveIsland}
+        effectiveShift={ws.effectiveShift}
         carryoverMeters={ws.carryoverMeters}
         existingSlotConflict={ws.existingSlotConflict}
         isDayFull={ws.isDayFull}

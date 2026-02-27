@@ -52,6 +52,10 @@ export const AppProvider = ({ children }) => {
   const [prices, setPrices] = useState(INITIAL_PRICES);
   const [users, setUsers] = useState([]);
   const [shifts, setShifts] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [creditPayments, setCreditPayments] = useState([]);
+  const [creditImports, setCreditImports] = useState([]);
+  const [creditVerifications, setCreditVerifications] = useState({});
   const [verifiedReports, setVerifiedReports] = useState([]);
   const [backups, setBackups] = useState([]);
 
@@ -105,6 +109,32 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     return onSnapshot(collection(db, 'shifts'), snap => {
       setShifts(snap.docs.map(d => d.data()));
+    });
+  }, []);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'schedules'), snap => {
+      setSchedules(snap.docs.map(d => d.data()));
+    });
+  }, []);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'creditPayments'), snap => {
+      setCreditPayments(snap.docs.map(d => d.data()));
+    });
+  }, []);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'creditImports'), snap => {
+      setCreditImports(snap.docs.map(d => d.data()));
+    });
+  }, []);
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'creditVerifications'), snap => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      setCreditVerifications(map);
     });
   }, []);
 
@@ -194,6 +224,103 @@ export const AppProvider = ({ children }) => {
 
   const editUser = (userId, data) => updateDoc(doc(db, 'users', String(userId)), data);
   const deleteUser = (userId) => deleteDoc(doc(db, 'users', String(userId)));
+
+  // ---- Créditos: pagos e importaciones ----
+  // ---- Verificaciones de créditos ----
+  const toggleCreditVerification = (txId) => {
+    const safeId = String(txId).replace(/\//g, '_');
+    const ref = doc(db, 'creditVerifications', safeId);
+    if (creditVerifications[safeId]) {
+      return deleteDoc(ref);
+    }
+    return setDoc(ref, { txId: safeId, verifiedAt: new Date().toISOString(), verifiedBy: currentUser?.name || 'Admin' });
+  };
+
+  // ---- Edición de créditos ----
+  // Edita un crédito dentro de un turno
+  const updateShiftCredit = (shiftId, creditIdx, updatedCredit) => {
+    updateShift(shiftId, (shift) => ({
+      ...shift,
+      credits: (shift.credits || []).map((c, i) => (i === creditIdx ? { ...c, ...updatedCredit } : c)),
+    }));
+  };
+
+  // Edita un crédito importado
+  const updateCreditImport = (id, data) =>
+    setDoc(doc(db, 'creditImports', String(id)), data, { merge: true });
+
+  // Elimina un crédito específico de un turno (por índice)
+  const deleteShiftCredit = (shiftId, creditIdx) => {
+    updateShift(shiftId, (shift) => ({
+      ...shift,
+      credits: (shift.credits || []).filter((_, i) => i !== creditIdx),
+    }));
+  };
+
+  // Renombra un cliente en todos sus créditos, importaciones y pagos
+  const renameClient = async (oldName, newName) => {
+    const newUpper = newName.toUpperCase().trim();
+    const writes = [];
+
+    shifts.forEach(shift => {
+      const hasOld = (shift.credits || []).some(
+        c => (c.client || '').toUpperCase().trim() === oldName
+      );
+      if (hasOld) {
+        writes.push({
+          ref: doc(db, 'shifts', String(shift.id)),
+          data: {
+            ...shift,
+            credits: (shift.credits || []).map(c =>
+              (c.client || '').toUpperCase().trim() === oldName
+                ? { ...c, client: newUpper }
+                : c
+            ),
+          },
+        });
+      }
+    });
+
+    creditImports.forEach(imp => {
+      if ((imp.clientName || '').toUpperCase().trim() === oldName) {
+        writes.push({ ref: doc(db, 'creditImports', String(imp.id)), data: { ...imp, clientName: newUpper } });
+      }
+    });
+
+    creditPayments.forEach(pmt => {
+      if ((pmt.clientName || '').toUpperCase().trim() === oldName) {
+        writes.push({ ref: doc(db, 'creditPayments', String(pmt.id)), data: { ...pmt, clientName: newUpper } });
+      }
+    });
+
+    await batchWrite(writes);
+  };
+
+  const addCreditPayment = (data) => {
+    const id = Date.now();
+    return setDoc(doc(db, 'creditPayments', String(id)), {
+      ...data,
+      id,
+      clientName: (data.clientName || '').toUpperCase().trim(),
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  const addCreditImports = async (imports) => {
+    const items = imports.map((imp, i) => {
+      const id = Date.now() + i;
+      return { ref: doc(db, 'creditImports', String(id)), data: { ...imp, id } };
+    });
+    await batchWrite(items);
+  };
+
+  const deleteCreditImport = (id) => deleteDoc(doc(db, 'creditImports', String(id)));
+
+  // ---- Horarios ----
+  const setSchedule = (workerId, workerName, entries) =>
+    setDoc(doc(db, 'schedules', String(workerId)), { id: workerId, workerId, workerName, entries });
+
+  const deleteSchedule = (workerId) => deleteDoc(doc(db, 'schedules', String(workerId)));
 
   // ---- Resetear todos los datos ----
   const resetAllData = async () => {
@@ -292,7 +419,9 @@ export const AppProvider = ({ children }) => {
   const isAdmin = currentUser?.role === 'admin';
 
   const value = {
-    currentUser, currentPage, prices, users, shifts, isAdmin, loading,
+    currentUser, currentPage, prices, users, shifts, schedules,
+    creditPayments, creditImports, creditVerifications,
+    isAdmin, loading,
     lastClosedShift, setLastClosedShift,
     verifiedReports, verifyTarget, setVerifyTarget,
     backups, backupsLoaded,
@@ -301,6 +430,9 @@ export const AppProvider = ({ children }) => {
     login, logout,
     addShift, updateShift, closeShift,
     addUser, editUser, deleteUser,
+    setSchedule, deleteSchedule,
+    addCreditPayment, addCreditImports, deleteCreditImport, updateCreditImport,
+    toggleCreditVerification, updateShiftCredit, deleteShiftCredit, renameClient,
     resetAllData,
     createBackup, restoreFromBackup, exportToJson, importFromJson,
   };

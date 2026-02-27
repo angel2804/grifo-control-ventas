@@ -139,6 +139,17 @@ export const CYLINDER_SIZES = [
 ];
 
 // ============================================
+// DÍAS DE LA SEMANA
+// ============================================
+export const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+// Retorna el nombre del día actual en español
+export const getCurrentDayOfWeek = () => {
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  return days[new Date().getDay()];
+};
+
+// ============================================
 // USUARIO ADMINISTRADOR POR DEFECTO
 // Cambia la contraseña desde la sección Usuarios
 // ============================================
