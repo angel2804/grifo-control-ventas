@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   collection, doc, setDoc, updateDoc, deleteDoc,
   onSnapshot, getDoc, writeBatch,
@@ -8,10 +8,6 @@ import { INITIAL_PRICES, INITIAL_USERS, DEMO_SHIFTS } from '../utils/constants';
 
 // ============================================
 // CONTEXTO GLOBAL DE LA APLICACIÓN
-// Los datos compartidos (turnos, precios,
-// usuarios, reportes) se sincronizan en tiempo
-// real con Firebase Firestore.
-// La sesión (usuario/página) sigue en localStorage.
 // ============================================
 
 const AppContext = createContext();
@@ -20,8 +16,24 @@ const loadStorage = (key, fallback) => {
   try {
     const v = localStorage.getItem(key);
     return v ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
+  } catch { return fallback; }
+};
+
+// Escribe documentos en Firestore en lotes de 499 (límite Firestore = 500)
+const batchWrite = async (items) => {
+  for (let i = 0; i < items.length; i += 499) {
+    const batch = writeBatch(db);
+    items.slice(i, i + 499).forEach(({ ref, data }) => batch.set(ref, data));
+    await batch.commit();
+  }
+};
+
+// Borra documentos en Firestore en lotes de 499
+const batchDelete = async (refs) => {
+  for (let i = 0; i < refs.length; i += 499) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + 499).forEach(ref => batch.delete(ref));
+    await batch.commit();
   }
 };
 
@@ -32,7 +44,7 @@ export const useApp = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  // ── Sesión local (no necesitan sincronizarse entre dispositivos) ──
+  // ── Sesión local ──
   const [currentUser, setCurrentUser] = useState(() => loadStorage('grifo_user', null));
   const [currentPage, setCurrentPage] = useState(() => loadStorage('grifo_page', 'dashboard'));
 
@@ -41,21 +53,26 @@ export const AppProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [verifiedReports, setVerifiedReports] = useState([]);
+  const [backups, setBackups] = useState([]);
 
-  // ── Loading: espera a que el seed y los usuarios estén listos ──
+  // ── Loading ──
   const [seeded, setSeeded] = useState(false);
   const [usersLoaded, setUsersLoaded] = useState(false);
+  const [backupsLoaded, setBackupsLoaded] = useState(false);
   const loading = !seeded || !usersLoaded;
 
-  // ── Estado local de UI (no persiste) ──
+  // ── UI state ──
   const [lastClosedShift, setLastClosedShift] = useState(null);
   const [verifyTarget, setVerifyTarget] = useState(null);
 
-  // ---- Persistir sesión en localStorage ----
+  // ── Control auto-backup (1 vez por sesión) ──
+  const autoBackupDone = useRef(false);
+
+  // ---- Persistir sesión ----
   useEffect(() => { localStorage.setItem('grifo_user', JSON.stringify(currentUser)); }, [currentUser]);
   useEffect(() => { localStorage.setItem('grifo_page', JSON.stringify(currentPage)); }, [currentPage]);
 
-  // ---- Sembrar datos iniciales si Firestore está vacío ----
+  // ---- Seed inicial ----
   useEffect(() => {
     const seed = async () => {
       const pricesSnap = await getDoc(doc(db, 'config', 'prices'));
@@ -66,13 +83,12 @@ export const AppProvider = ({ children }) => {
         DEMO_SHIFTS.forEach(s => batch.set(doc(db, 'shifts', String(s.id)), s));
         await batch.commit();
       }
-      setSeeded(true); // Seed terminó (con o sin escritura)
+      setSeeded(true);
     };
     seed();
   }, []);
 
-  // ---- Listeners en tiempo real ----
-
+  // ---- Listeners Firestore ----
   useEffect(() => {
     return onSnapshot(doc(db, 'config', 'prices'), snap => {
       if (snap.exists()) setPrices(snap.data());
@@ -82,7 +98,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap => {
       setUsers(snap.docs.map(d => d.data()));
-      setUsersLoaded(true); // Usuarios recibidos (aunque sea vacío al inicio)
+      setUsersLoaded(true);
     });
   }, []);
 
@@ -98,9 +114,46 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
-  // ---- Autenticación ----
+  useEffect(() => {
+    return onSnapshot(collection(db, 'backups'), snap => {
+      setBackups(snap.docs.map(d => d.data()).sort((a, b) => b.id - a.id));
+      setBackupsLoaded(true);
+    });
+  }, []);
 
+  // ---- Auto-backup diario (se ejecuta cuando el admin abre la app) ----
+  useEffect(() => {
+    if (!seeded || !backupsLoaded || !currentUser || currentUser.role !== 'admin') return;
+    if (autoBackupDone.current) return;
+    if (shifts.length === 0 && verifiedReports.length === 0) { autoBackupDone.current = true; return; }
+
+    const today = new Date().toLocaleDateString('en-CA');
+    const hasToday = backups.some(b => b.createdAt?.startsWith(today));
+    if (hasToday) { autoBackupDone.current = true; return; }
+
+    autoBackupDone.current = true;
+    const id = Date.now();
+    const label = `Auto — ${new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+    const backupDoc = {
+      id, createdAt: new Date().toISOString(), label, auto: true,
+      shiftsCount: shifts.length, reportsCount: verifiedReports.length,
+      prices, users, shifts, verifiedReports,
+    };
+
+    setDoc(doc(db, 'backups', String(id)), backupDoc)
+      .then(() => {
+        // Mantener solo los 7 backups más recientes
+        const all = [...backups, backupDoc].sort((a, b) => b.id - a.id);
+        if (all.length > 7) {
+          return batchDelete(all.slice(7).map(b => doc(db, 'backups', String(b.id))));
+        }
+      })
+      .catch(err => console.warn('Auto-backup falló:', err));
+  }, [seeded, backupsLoaded, currentUser?.id, backups.length, shifts.length, verifiedReports.length]); // eslint-disable-line
+
+  // ---- Autenticación ----
   const login = (user) => {
+    autoBackupDone.current = false; // Resetear para la nueva sesión
     setCurrentUser(user);
     setCurrentPage(user.role === 'admin' ? 'reports' : 'shift');
   };
@@ -111,58 +164,38 @@ export const AppProvider = ({ children }) => {
   };
 
   // ---- Precios ----
-
-  const savePrices = (newPrices) => {
-    setDoc(doc(db, 'config', 'prices'), newPrices);
-  };
+  const savePrices = (newPrices) => setDoc(doc(db, 'config', 'prices'), newPrices);
 
   // ---- Turnos ----
-
-  const addShift = (shift) => {
-    setDoc(doc(db, 'shifts', String(shift.id)), shift);
-  };
+  const addShift = (shift) => setDoc(doc(db, 'shifts', String(shift.id)), shift);
 
   const updateShift = (shiftId, updater) => {
     const shift = shifts.find(s => s.id === shiftId);
     if (shift) setDoc(doc(db, 'shifts', String(shiftId)), updater(shift));
   };
 
-  const closeShift = (shiftId) => {
-    updateDoc(doc(db, 'shifts', String(shiftId)), { status: 'closed' });
-  };
+  const closeShift = (shiftId) => updateDoc(doc(db, 'shifts', String(shiftId)), { status: 'closed' });
 
   // ---- Reportes verificados ----
-
-  const addVerifiedReport = (report) => {
-    setDoc(doc(db, 'verifiedReports', String(report.id)), report);
-  };
+  const addVerifiedReport = (report) => setDoc(doc(db, 'verifiedReports', String(report.id)), report);
 
   const updateVerifiedReport = (id, updater) => {
     const report = verifiedReports.find(r => r.id === id);
     if (report) setDoc(doc(db, 'verifiedReports', String(id)), updater(report));
   };
 
-  const deleteVerifiedReport = (id) => {
-    deleteDoc(doc(db, 'verifiedReports', String(id)));
-  };
+  const deleteVerifiedReport = (id) => deleteDoc(doc(db, 'verifiedReports', String(id)));
 
   // ---- Usuarios ----
-
   const addUser = (user) => {
     const newUser = { ...user, id: Date.now() };
     setDoc(doc(db, 'users', String(newUser.id)), newUser);
   };
 
-  const editUser = (userId, data) => {
-    updateDoc(doc(db, 'users', String(userId)), data);
-  };
-
-  const deleteUser = (userId) => {
-    deleteDoc(doc(db, 'users', String(userId)));
-  };
+  const editUser = (userId, data) => updateDoc(doc(db, 'users', String(userId)), data);
+  const deleteUser = (userId) => deleteDoc(doc(db, 'users', String(userId)));
 
   // ---- Resetear todos los datos ----
-
   const resetAllData = async () => {
     const batch = writeBatch(db);
     shifts.forEach(s => batch.delete(doc(db, 'shifts', String(s.id))));
@@ -174,35 +207,102 @@ export const AppProvider = ({ children }) => {
     await batch.commit();
   };
 
+  // ============================================
+  // ── SISTEMA DE COPIAS DE SEGURIDAD ──
+  // ============================================
+
+  // Crear backup manualmente
+  const createBackup = async (label) => {
+    const id = Date.now();
+    const fmt = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const time = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const backupDoc = {
+      id,
+      createdAt: new Date().toISOString(),
+      label: label || `Manual — ${fmt} ${time}`,
+      auto: false,
+      shiftsCount: shifts.length,
+      reportsCount: verifiedReports.length,
+      prices, users, shifts, verifiedReports,
+    };
+    await setDoc(doc(db, 'backups', String(id)), backupDoc);
+    // Mantener solo los 7 más recientes
+    const all = [...backups, backupDoc].sort((a, b) => b.id - a.id);
+    if (all.length > 7) {
+      await batchDelete(all.slice(7).map(b => doc(db, 'backups', String(b.id))));
+    }
+  };
+
+  // Restaurar desde backup de Firestore
+  const restoreFromBackup = async (backupId) => {
+    const backup = backups.find(b => b.id === backupId);
+    if (!backup) throw new Error('Backup no encontrado');
+    await _applyRestore(backup);
+  };
+
+  // Aplicar restauración (compartido por Firestore y JSON)
+  const _applyRestore = async (data) => {
+    // 1. Borrar datos actuales
+    const refsToDelete = [
+      ...shifts.map(s => doc(db, 'shifts', String(s.id))),
+      ...verifiedReports.map(r => doc(db, 'verifiedReports', String(r.id))),
+      ...users.map(u => doc(db, 'users', String(u.id))),
+    ];
+    await batchDelete(refsToDelete);
+
+    // 2. Escribir datos del backup
+    const refsToWrite = [
+      { ref: doc(db, 'config', 'prices'), data: data.prices || INITIAL_PRICES },
+      ...(data.users || []).map(u => ({ ref: doc(db, 'users', String(u.id)), data: u })),
+      ...(data.shifts || []).map(s => ({ ref: doc(db, 'shifts', String(s.id)), data: s })),
+      ...(data.verifiedReports || []).map(r => ({ ref: doc(db, 'verifiedReports', String(r.id)), data: r })),
+    ];
+    await batchWrite(refsToWrite);
+  };
+
+  // Exportar todos los datos como archivo JSON
+  const exportToJson = () => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+      prices, users, shifts, verifiedReports,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `grifo-backup-${new Date().toLocaleDateString('en-CA')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Importar y restaurar desde archivo JSON
+  const importFromJson = async (jsonString) => {
+    const data = JSON.parse(jsonString);
+    if (!data.prices || !Array.isArray(data.users) || !Array.isArray(data.shifts)) {
+      throw new Error('Archivo JSON inválido o corrupto');
+    }
+    await _applyRestore(data);
+  };
+
+  // ============================================
+
   const isAdmin = currentUser?.role === 'admin';
 
   const value = {
-    currentUser,
-    currentPage,
-    prices,
-    users,
-    shifts,
-    isAdmin,
-    loading,
-    lastClosedShift,
-    setLastClosedShift,
-    verifiedReports,
-    verifyTarget,
-    setVerifyTarget,
-    addVerifiedReport,
-    updateVerifiedReport,
-    deleteVerifiedReport,
-    setCurrentPage,
-    setPrices: savePrices,
-    login,
-    logout,
-    addShift,
-    updateShift,
-    closeShift,
-    addUser,
-    editUser,
-    deleteUser,
+    currentUser, currentPage, prices, users, shifts, isAdmin, loading,
+    lastClosedShift, setLastClosedShift,
+    verifiedReports, verifyTarget, setVerifyTarget,
+    backups, backupsLoaded,
+    addVerifiedReport, updateVerifiedReport, deleteVerifiedReport,
+    setCurrentPage, setPrices: savePrices,
+    login, logout,
+    addShift, updateShift, closeShift,
+    addUser, editUser, deleteUser,
     resetAllData,
+    createBackup, restoreFromBackup, exportToJson, importFromJson,
   };
 
   return (

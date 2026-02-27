@@ -38,6 +38,7 @@ const Sidebar = () => {
     { key: 'meters',   label: 'Contómetros',     icon: '⛽' },
     { key: 'users',    label: 'Usuarios',        icon: '👤' },
     { key: 'shifts',   label: 'Turnos',          icon: '📋' },
+    { key: 'backups',  label: 'Copias de Seguridad', icon: '💾' },
   ];
 
   // Menú para grifero (sin Dashboard)

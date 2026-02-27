@@ -11,6 +11,7 @@ import ReportsPage from './pages/ReportsPage';
 import LiveIslandPage from './pages/LiveIslandPage';
 import VerifyReportPage from './pages/VerifyReportPage';
 import VerifiedReportsPage from './pages/VerifiedReportsPage';
+import BackupsPage from './pages/BackupsPage';
 
 // ============================================
 // COMPONENTE PRINCIPAL: App
@@ -60,6 +61,8 @@ const AppContent = () => {
         return isAdmin ? <VerifyReportPage /> : null;
       case 'verified':
         return isAdmin ? <VerifiedReportsPage /> : null;
+      case 'backups':
+        return isAdmin ? <BackupsPage /> : null;
 
       // Páginas solo para GRIFERO
       case 'shift':
