@@ -1,14 +1,14 @@
 import React from 'react';
 import { Btn, HelpBtn, ProductTag } from '../../UIComponents';
 import { formatCurrency, formatGallons } from '../../../utils/helpers';
-import { PRODUCTS_LIST } from '../../../utils/constants';
 
 const PROD_COLORS = { BIO: '#22c55e', REGULAR: '#3b82f6', PREMIUM: '#eab308', GLP: '#f97316' };
 
-const PromosTab = ({ shift, prices, calcs, actions }) => {
+const PromosTab = ({ shift, prices, calcs, actions, islandConfig }) => {
   const { totalPromosAmount } = calcs;
   const { openAddModal, openEditModal } = actions;
-  const productOptions = PRODUCTS_LIST.map((p) => ({ value: p, label: p }));
+  const products = islandConfig?.isGLP ? ['GLP'] : ['BIO', 'REGULAR', 'PREMIUM'];
+  const gridClass = products.length >= 3 ? 'grid-3' : '';
 
   return (
     <div>
@@ -22,8 +22,8 @@ const PromosTab = ({ shift, prices, calcs, actions }) => {
           'Estos galones sí aparecen en los contómetros pero no generan cobro en el cuadre.',
         ]} />
       </div>
-      <div className="grid-4" style={{ gap: 10 }}>
-        {productOptions.map(({ value: product, label }) => {
+      <div className={gridClass} style={{ gap: 10 }}>
+        {products.map((product) => {
           const color = PROD_COLORS[product] || '#8b5cf6';
           const prodItems = shift.promotions
             .map((p, i) => ({ ...p, _idx: i }))
@@ -36,10 +36,11 @@ const PromosTab = ({ shift, prices, calcs, actions }) => {
             <div key={product} style={{
               background: '#0f172a', borderRadius: 12,
               padding: '14px 12px', borderTop: `3px solid ${color}`,
+              marginBottom: gridClass ? 0 : 10,
             }}>
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
                 <ProductTag product={product} />
-                <div style={{ fontWeight: 800, fontSize: 15, margin: '6px 0 2px' }}>{label}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, margin: '6px 0 2px' }}>{product}</div>
                 <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
                   {prodItems.length === 0 ? 'Sin registros' : `${prodItems.length} · ${formatGallons(prodGallons)}`}
                 </div>
@@ -58,14 +59,14 @@ const PromosTab = ({ shift, prices, calcs, actions }) => {
                       onClick={() => openEditModal('promo', p._idx, p)}
                       style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '6px 2px', cursor: 'pointer', borderBottom: '1px solid #1e293b',
+                        padding: '8px 4px', cursor: 'pointer', borderBottom: '1px solid #1e293b',
                       }}>
-                      <span style={{ fontSize: 12, color: '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 13, color: '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.dniPlate || '—'}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700 }}>{formatGallons(parseFloat(p.gallons) || 0)}</span>
-                        <span style={{ fontSize: 10, color: '#475569' }}>✏️</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>{formatGallons(parseFloat(p.gallons) || 0)}</span>
+                        <span style={{ fontSize: 11, color: '#475569' }}>✏️</span>
                       </div>
                     </div>
                   ))}

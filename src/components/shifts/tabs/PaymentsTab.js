@@ -24,7 +24,7 @@ const PaymentsTab = ({ shift, calcs, actions }) => {
           'Al terminar, el total aparece abajo en morado.',
         ]} />
       </div>
-      <div className="grid-3" style={{ gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 }}>
         {PAYMENT_COLUMNS.map(({ method, icon, color }) => {
           const methodItems = shift.payments
             .map((p, i) => ({ ...p, _idx: i }))
