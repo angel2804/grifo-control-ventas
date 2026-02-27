@@ -93,8 +93,9 @@ export function useWorkerShift() {
     );
   }, [shift, prices]);
 
-  const expectedCash = totalSales - totalPayments - totalCreditsAmount - totalPromosAmount - totalDiscountsAmount - totalExpenses;
-  const difference = totalDeliveries + totalPayments + totalAdvance - totalSales + totalCreditsAmount + totalPromosAmount + totalDiscountsAmount + totalExpenses;
+  // El adelanto es dinero recibido por el grifero: se suma a lo que debe entregar
+  const expectedCash = totalSales - totalPayments - totalCreditsAmount - totalPromosAmount - totalDiscountsAmount - totalExpenses + totalAdvance;
+  const difference = totalDeliveries + totalPayments - totalAdvance - totalSales + totalCreditsAmount + totalPromosAmount + totalDiscountsAmount + totalExpenses;
 
   // ---- CRUD GENÉRICO ----
   const addItem = (field, item) => {

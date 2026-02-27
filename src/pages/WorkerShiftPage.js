@@ -58,7 +58,7 @@ const WorkerShiftPage = () => {
       />
       <ItemModal
         itemModal={ws.itemModal}
-        setItemModal={(v) => ws.setModalField && null /* controlled via hook */}
+        setItemModal={ws.setItemModal}
         setModalField={ws.setModalField}
         handleModalSave={ws.handleModalSave}
         handleModalDelete={ws.handleModalDelete}
@@ -69,6 +69,9 @@ const WorkerShiftPage = () => {
         confirmClose={ws.confirmClose}
         setConfirmClose={ws.setConfirmClose}
         handleConfirmClose={ws.handleConfirmClose}
+        shift={ws.shift}
+        calcs={ws.calcs}
+        isGLPShift={ws.islandConfig?.isGLP ?? false}
       />
     </>
   );

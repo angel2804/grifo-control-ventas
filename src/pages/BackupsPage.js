@@ -94,8 +94,17 @@ const BackupsPage = () => {
           background: msg.type === 'ok' ? '#14532d' : '#7f1d1d',
           color: msg.type === 'ok' ? '#4ade80' : '#f87171',
           border: `1px solid ${msg.type === 'ok' ? '#16a34a' : '#ef4444'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         }}>
-          {msg.type === 'ok' ? '✅ ' : '❌ '}{msg.text}
+          <span>{msg.type === 'ok' ? '✅ ' : '❌ '}{msg.text}</span>
+          <button
+            onClick={() => setMsg(null)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: msg.type === 'ok' ? '#4ade80' : '#f87171',
+              fontSize: 18, lineHeight: 1, padding: '0 2px', flexShrink: 0, opacity: 0.7,
+            }}
+          >✕</button>
         </div>
       )}
 

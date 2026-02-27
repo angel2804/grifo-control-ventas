@@ -37,11 +37,12 @@ const ShiftSummaryPrint = ({ shift, prices, onDismiss }) => {
   const islandCfg     = ISLANDS_CONFIG.find((i) => i.id.toString() === shift.island);
   const isGLP         = islandCfg?.isGLP;
   const cuadra        = Math.abs(balance.difference) < 0.01;
+  // El adelanto es dinero recibido por el grifero: se suma a lo que debe entregar
   const expCash       = balance.totalSales - balance.totalPayments - balance.totalCredits
-    - balance.totalPromos - balance.totalDiscounts - balance.totalExpenses;
+    - balance.totalPromos - balance.totalDiscounts - balance.totalExpenses + (balance.totalAdvance || 0);
   const totalNonCash  = balance.totalPayments + balance.totalCredits
     + balance.totalPromos + balance.totalDiscounts + balance.totalExpenses;
-  const totalDelivered = (balance.totalDeliveries || 0) + (balance.totalAdvance || 0);
+  const totalDelivered = balance.totalDeliveries || 0;
 
   const hasSmallSections = shift.payments.length > 0 || shift.credits.length > 0
     || (shift.promotions || []).length > 0 || (shift.discounts || []).length > 0
@@ -313,10 +314,26 @@ const ShiftSummaryPrint = ({ shift, prices, onDismiss }) => {
                 </div>
               )}
 
+              {/* Adelantos recibidos */}
+              {balance.totalAdvance > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #1e293b' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    ⏩ ADELANTOS RECIBIDOS
+                  </div>
+                  <div className="flex-between" style={{ fontSize: 12 }}>
+                    <span style={{ color: '#94a3b8' }}>Dinero recibido por adelantado</span>
+                    <span style={{ color: '#a78bfa', fontWeight: 700 }}>+{formatCurrency(balance.totalAdvance)}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Efectivo que debías entregar */}
               <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#1e3a5f)', borderRadius: 12, padding: '14px 16px', marginTop: 14, textAlign: 'center', border: '1px solid #3b82f6' }}>
                 <div style={{ fontSize: 10, color: '#93c5fd', letterSpacing: '0.08em', marginBottom: 6 }}>💵 DEBES ENTREGAR</div>
                 <div style={{ fontSize: 34, fontWeight: 900, color: '#60a5fa', lineHeight: 1 }}>{formatCurrency(expCash)}</div>
+                {balance.totalAdvance > 0 && (
+                  <div style={{ fontSize: 10, color: '#a5b4fc', marginTop: 5 }}>Incluye adelanto de {formatCurrency(balance.totalAdvance)}</div>
+                )}
               </div>
 
               {/* Entregas realizadas */}
@@ -324,7 +341,7 @@ const ShiftSummaryPrint = ({ shift, prices, onDismiss }) => {
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
                   📥 ENTREGASTE
                 </div>
-                {(shift.deliveries || []).filter(v => parseFloat(v) > 0).length === 0 && balance.totalAdvance === 0 && (
+                {(shift.deliveries || []).filter(v => parseFloat(v) > 0).length === 0 && (
                   <div style={{ fontSize: 12, color: '#475569', textAlign: 'center', padding: '4px 0' }}>Sin entregas registradas</div>
                 )}
                 {(shift.deliveries || []).filter(v => parseFloat(v) > 0).map((v, i) => (
@@ -333,12 +350,6 @@ const ShiftSummaryPrint = ({ shift, prices, onDismiss }) => {
                     <span style={{ fontWeight: 700 }}>{formatCurrency(parseFloat(v) || 0)}</span>
                   </div>
                 ))}
-                {balance.totalAdvance > 0 && (
-                  <div className="flex-between" style={{ fontSize: 12, marginBottom: 4 }}>
-                    <span style={{ color: '#94a3b8' }}>Pagos adelantados</span>
-                    <span style={{ fontWeight: 700 }}>{formatCurrency(balance.totalAdvance)}</span>
-                  </div>
-                )}
                 {totalDelivered > 0 && (
                   <div className="flex-between" style={{ paddingTop: 6, marginTop: 4, borderTop: '1px solid #334155' }}>
                     <span style={{ fontWeight: 700, fontSize: 13 }}>Total entregado</span>

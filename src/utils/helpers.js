@@ -134,8 +134,9 @@ export const calcShiftBalance = (shift, prices) => {
     0
   );
 
+  // El adelanto es dinero recibido por el grifero: aumenta lo que debe entregar
   const difference =
-    totalDeliveries + totalPayments + totalAdvance - totalSales +
+    totalDeliveries + totalPayments - totalAdvance - totalSales +
     totalCredits + totalPromos + totalDiscounts + totalExpenses;
 
   return {

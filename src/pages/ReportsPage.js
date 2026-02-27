@@ -120,9 +120,20 @@ const AdminReportsPage = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                       <span style={{ fontSize: 16 }}>⚠️</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#fca5a5' }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#fca5a5', flex: 1 }}>
                         {unbalancedShifts.length} turno{unbalancedShifts.length > 1 ? 's' : ''} con diferencia
                       </span>
+                      <button
+                        onClick={() => setShowBell(false)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: '#64748b', fontSize: 18, lineHeight: 1,
+                          padding: '2px 4px', borderRadius: 6,
+                          transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#e2e8f0'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                      >✕</button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {unbalancedShifts.map(s => {
@@ -416,9 +427,11 @@ const ClosedShiftView = ({ shift, island, prices, colStyle }) => {
             <DeducRow label="Promociones" value={balance.totalPromos} color="#f59e0b" />
             <DeducRow label="Descuentos" value={balance.totalDiscounts} color="#f59e0b" />
             <DeducRow label="Gastos" value={balance.totalExpenses} color="#ef4444" />
+            {balance.totalAdvance > 0 && (
+              <DeducRow label="⏩ Adelanto recibido (devolver)" value={balance.totalAdvance} color="#a78bfa" plain />
+            )}
             <div style={{ borderTop: '1px solid #334155', marginTop: 8, paddingTop: 8 }}>
               <DeducRow label="Entregas de dinero" value={balance.totalDeliveries} color="#34d399" plain />
-              <DeducRow label="Pagos adelantados" value={balance.totalAdvance} color="#34d399" plain />
             </div>
           </div>
 
@@ -525,8 +538,9 @@ const DayCompleteView = ({ dayShifts, prices, colStyle, date }) => {
     promos: acc.promos + balance.totalPromos,
     discounts: acc.discounts + balance.totalDiscounts,
     expenses: acc.expenses + balance.totalExpenses,
+    advances: acc.advances + (balance.totalAdvance || 0),
     difference: acc.difference + balance.difference,
-  }), { sales: 0, deliveries: 0, payments: 0, credits: 0, promos: 0, discounts: 0, expenses: 0, difference: 0 }),
+  }), { sales: 0, deliveries: 0, payments: 0, credits: 0, promos: 0, discounts: 0, expenses: 0, advances: 0, difference: 0 }),
     [allBalances]);
 
   const productTotals = useMemo(() => {
@@ -630,6 +644,9 @@ const DayCompleteView = ({ dayShifts, prices, colStyle, date }) => {
           <DeducRow label="Total Promociones" value={totals.promos} color="#f59e0b" />
           <DeducRow label="Total Descuentos" value={totals.discounts} color="#f59e0b" />
           <DeducRow label="Total Gastos" value={totals.expenses} color="#ef4444" />
+          {totals.advances > 0 && (
+            <DeducRow label="⏩ Total Adelantos (devolver)" value={totals.advances} color="#a78bfa" plain />
+          )}
           <div style={{ borderTop: '1px solid #334155', marginTop: 8, paddingTop: 8 }}>
             <DeducRow label="Total Entregas" value={totals.deliveries} color="#34d399" plain />
           </div>
@@ -885,22 +902,22 @@ const PrintShiftReport = ({ shift, island, prices, date, mode, sections }) => {
                   <td style={{ ...PT, textAlign: 'right' }}>{formatCurrency(value)}</td>
                 </tr>
               ))}
+              {balance.totalAdvance > 0 && (
+                <tr>
+                  <td colSpan={2} style={PT}>+ Adelanto recibido</td>
+                  <td style={{ ...PT, textAlign: 'right' }}>{formatCurrency(balance.totalAdvance)}</td>
+                </tr>
+              )}
               <tr>
                 <td colSpan={2} style={{ ...PT, fontWeight: 700 }}>= Efect. esperado</td>
                 <td style={{ ...PT, textAlign: 'right', fontWeight: 700 }}>
-                  {formatCurrency(balance.totalSales - balance.totalPayments - balance.totalCredits - balance.totalPromos - balance.totalDiscounts - balance.totalExpenses)}
+                  {formatCurrency(balance.totalSales - balance.totalPayments - balance.totalCredits - balance.totalPromos - balance.totalDiscounts - balance.totalExpenses + (balance.totalAdvance || 0))}
                 </td>
               </tr>
               <tr>
                 <td colSpan={2} style={PT}>Entregas</td>
                 <td style={{ ...PT, textAlign: 'right' }}>{formatCurrency(balance.totalDeliveries)}</td>
               </tr>
-              {balance.totalAdvance > 0 && (
-                <tr>
-                  <td colSpan={2} style={PT}>Adelantos</td>
-                  <td style={{ ...PT, textAlign: 'right' }}>{formatCurrency(balance.totalAdvance)}</td>
-                </tr>
-              )}
               <tr style={{ background: cuadra ? '#e8f5e9' : '#ffebee' }}>
                 <td colSpan={2} style={{ ...PT, fontWeight: 900 }}>DIFERENCIA</td>
                 <td style={{ ...PT, textAlign: 'right', fontWeight: 900 }}>
@@ -955,8 +972,9 @@ const PrintDayReport = ({ dayShifts, prices, date, mode, sections }) => {
     promos: acc.promos + balance.totalPromos,
     discounts: acc.discounts + balance.totalDiscounts,
     expenses: acc.expenses + balance.totalExpenses,
+    advances: acc.advances + (balance.totalAdvance || 0),
     difference: acc.difference + balance.difference,
-  }), { sales: 0, deliveries: 0, payments: 0, credits: 0, promos: 0, discounts: 0, expenses: 0, difference: 0 });
+  }), { sales: 0, deliveries: 0, payments: 0, credits: 0, promos: 0, discounts: 0, expenses: 0, advances: 0, difference: 0 });
 
   const productTotals = {};
   dayShifts.forEach(s => {
@@ -1085,6 +1103,7 @@ const PrintDayReport = ({ dayShifts, prices, date, mode, sections }) => {
                 {[
                   ['Total Créditos', formatCurrency(totals.credits)],
                   ['Total Gastos', formatCurrency(totals.expenses)],
+                  ['Total Adelantos', formatCurrency(totals.advances)],
                   ['Total Entregas', formatCurrency(totals.deliveries)],
                 ].filter(([, v]) => v !== 'S/ 0.00').map(([k, v]) => (
                   <tr key={k}><td style={PT}>{k}</td><td style={{ ...PT, textAlign: 'right' }}>{v}</td></tr>

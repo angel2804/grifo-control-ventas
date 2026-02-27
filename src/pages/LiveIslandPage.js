@@ -322,9 +322,11 @@ const LiveShiftView = ({ shift, island, prices }) => {
             <DeducRow label="Promociones" value={balance.totalPromos} color="#f59e0b" />
             <DeducRow label="Descuentos" value={balance.totalDiscounts} color="#f59e0b" />
             <DeducRow label="Gastos" value={balance.totalExpenses} color="#ef4444" />
+            {balance.totalAdvance > 0 && (
+              <DeducRow label="⏩ Adelanto recibido (devolver)" value={balance.totalAdvance} color="#a78bfa" plain />
+            )}
             <div style={{ borderTop: '1px solid #334155', marginTop: 8, paddingTop: 8 }}>
               <DeducRow label="Entregas de dinero" value={balance.totalDeliveries} color="#34d399" plain />
-              <DeducRow label="Pagos adelantados" value={balance.totalAdvance} color="#34d399" plain />
             </div>
           </div>
 
