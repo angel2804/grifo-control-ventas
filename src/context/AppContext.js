@@ -42,8 +42,10 @@ export const AppProvider = ({ children }) => {
   const [shifts, setShifts] = useState([]);
   const [verifiedReports, setVerifiedReports] = useState([]);
 
-  // ── Loading: true mientras Firestore carga los datos iniciales ──
-  const [loading, setLoading] = useState(true);
+  // ── Loading: espera a que el seed y los usuarios estén listos ──
+  const [seeded, setSeeded] = useState(false);
+  const [usersLoaded, setUsersLoaded] = useState(false);
+  const loading = !seeded || !usersLoaded;
 
   // ── Estado local de UI (no persiste) ──
   const [lastClosedShift, setLastClosedShift] = useState(null);
@@ -57,13 +59,14 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const seed = async () => {
       const pricesSnap = await getDoc(doc(db, 'config', 'prices'));
-      if (pricesSnap.exists()) return; // Ya tiene datos, no tocar
-
-      const batch = writeBatch(db);
-      batch.set(doc(db, 'config', 'prices'), INITIAL_PRICES);
-      INITIAL_USERS.forEach(u => batch.set(doc(db, 'users', String(u.id)), u));
-      DEMO_SHIFTS.forEach(s => batch.set(doc(db, 'shifts', String(s.id)), s));
-      await batch.commit();
+      if (!pricesSnap.exists()) {
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'config', 'prices'), INITIAL_PRICES);
+        INITIAL_USERS.forEach(u => batch.set(doc(db, 'users', String(u.id)), u));
+        DEMO_SHIFTS.forEach(s => batch.set(doc(db, 'shifts', String(s.id)), s));
+        await batch.commit();
+      }
+      setSeeded(true); // Seed terminó (con o sin escritura)
     };
     seed();
   }, []);
@@ -79,13 +82,13 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), snap => {
       setUsers(snap.docs.map(d => d.data()));
+      setUsersLoaded(true); // Usuarios recibidos (aunque sea vacío al inicio)
     });
   }, []);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'shifts'), snap => {
       setShifts(snap.docs.map(d => d.data()));
-      setLoading(false);
     });
   }, []);
 
