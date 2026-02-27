@@ -15,7 +15,7 @@ const ShiftsPage = () => {
   const [form, setForm] = useState({
     worker: '',
     island: '1',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA'),
     shift: 'Mañana',
   });
 

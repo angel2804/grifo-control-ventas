@@ -7,7 +7,7 @@ import {
 } from '../utils/helpers';
 import { ISLANDS_CONFIG } from '../utils/constants';
 
-const todayStr = new Date().toISOString().split('T')[0];
+const todayStr = new Date().toLocaleDateString('en-CA');
 const SHIFT_TABS = ['Mañana', 'Tarde', 'Noche'];
 
 // ──────────────────────────────────────────────

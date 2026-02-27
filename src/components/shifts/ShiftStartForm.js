@@ -40,7 +40,7 @@ const ShiftStartForm = ({
               label="FECHA"
               type="date"
               value={startForm.date}
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date().toLocaleDateString('en-CA')}
               onChange={(e) => setStartForm({ ...startForm, date: e.target.value })}
             />
             <Select

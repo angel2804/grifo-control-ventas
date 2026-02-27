@@ -67,7 +67,7 @@ export const createEmptyShift = () => ({
   id: Date.now(),
   worker: '',
   island: '',
-  date: new Date().toISOString().split('T')[0],
+  date: new Date().toLocaleDateString('en-CA'),
   shift: 'Mañana',
   meters: generateMeters(),
   payments: [],        // { method, reference, invoice, amount }
@@ -180,7 +180,7 @@ export const sumArray = (arr) => {
 // OBTENER FECHA DE HOY EN FORMATO YYYY-MM-DD
 // ============================================
 export const getTodayDate = () => {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('en-CA');
 };
 
 // ============================================

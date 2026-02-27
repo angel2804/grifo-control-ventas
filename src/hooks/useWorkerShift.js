@@ -122,7 +122,7 @@ export function useWorkerShift() {
   // ---- FORMULARIO DE INICIO ----
   const [startForm, setStartForm] = useState({
     island: ISLANDS_CONFIG[0].id.toString(),
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA'),
     shift: 'Mañana',
   });
 
