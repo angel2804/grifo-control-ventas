@@ -20,7 +20,7 @@ const VerifyReportPage = () => {
   const {
     verifyTarget, setVerifyTarget, setCurrentPage,
     addVerifiedReport, updateVerifiedReport,
-    verifiedReports, prices,
+    verifiedReports, prices, updateShift,
   } = useApp();
 
   if (!verifyTarget) {
@@ -46,7 +46,7 @@ const VerifyReportPage = () => {
   // Decidir qué formulario mostrar
   const sharedProps = {
     verifyTarget, setVerifyTarget, setCurrentPage,
-    addVerifiedReport, updateVerifiedReport, verifiedReports, prices,
+    addVerifiedReport, updateVerifiedReport, verifiedReports, prices, updateShift,
   };
 
   if (verifyTarget.shifts) {
@@ -60,20 +60,45 @@ const VerifyReportPage = () => {
 // ══════════════════════════════════════════════
 const VerifyForm = ({
   verifyTarget, setVerifyTarget, setCurrentPage,
-  addVerifiedReport, updateVerifiedReport, verifiedReports, prices,
+  addVerifiedReport, updateVerifiedReport, verifiedReports, prices, updateShift,
 }) => {
   const { shift, editingId } = verifyTarget;
   const existing = editingId ? verifiedReports.find(r => r.id === editingId) : null;
   const island = ISLANDS_CONFIG.find(i => i.id.toString() === shift.island);
-  const balance = useMemo(() => calcShiftBalance(shift, prices), [shift, prices]);
-  const salesByProduct = useMemo(() => calcSalesByProduct(shift, prices), [shift, prices]);
 
+  // ── Estado de verificación + datos editables de ítems ──
   const [items, setItems] = useState(() => ({
     payments:   (shift.payments   || []).map((p, i) => ({ ...p, _id: i, verified: existing?.items?.payments?.[i]?.verified   ?? null })),
     credits:    (shift.credits    || []).map((c, i) => ({ ...c, _id: i, verified: existing?.items?.credits?.[i]?.verified    ?? null })),
     promotions: (shift.promotions || []).map((p, i) => ({ ...p, _id: i, verified: existing?.items?.promotions?.[i]?.verified ?? null })),
     discounts:  (shift.discounts  || []).map((d, i) => ({ ...d, _id: i, verified: existing?.items?.discounts?.[i]?.verified  ?? null })),
   }));
+
+  // ── Estado editable para gastos y contómetros ──
+  const [editedExpenses, setEditedExpenses] = useState(() => JSON.parse(JSON.stringify(shift.expenses || [])));
+  const [editedMeters,   setEditedMeters]   = useState(() => JSON.parse(JSON.stringify(shift.meters   || {})));
+  const [showEditor, setShowEditor] = useState(false);
+
+  // ── Turno efectivo (con correcciones aplicadas) ──
+  const editedShift = useMemo(() => ({
+    ...shift,
+    payments:   items.payments.map(  ({ _id, verified, ...r }) => r),
+    credits:    items.credits.map(   ({ _id, verified, ...r }) => r),
+    promotions: items.promotions.map(({ _id, verified, ...r }) => r),
+    discounts:  items.discounts.map( ({ _id, verified, ...r }) => r),
+    expenses:   editedExpenses,
+    meters:     editedMeters,
+  }), [shift, items, editedExpenses, editedMeters]);
+
+  const hasEdits = useMemo(() =>
+    JSON.stringify(editedShift) !== JSON.stringify(shift),
+    [editedShift, shift]
+  );
+
+  // Balance siempre refleja las correcciones
+  const balance = useMemo(() => calcShiftBalance(editedShift, prices), [editedShift, prices]);
+  const salesByProduct = useMemo(() => calcSalesByProduct(editedShift, prices), [editedShift, prices]);
+
   const [cashReceived, setCashReceived] = useState(existing?.cashReceived?.toString() ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
 
@@ -84,6 +109,16 @@ const VerifyForm = ({
         item._id === id
           ? { ...item, verified: item.verified === null ? true : item.verified === true ? false : null }
           : item
+      ),
+    }));
+  };
+
+  // Editar un campo de un ítem (amount, gallons, etc.)
+  const updateItemField = (section, id, field, val) => {
+    setItems(prev => ({
+      ...prev,
+      [section]: prev[section].map(item =>
+        item._id === id ? { ...item, [field]: val } : item
       ),
     }));
   };
@@ -114,14 +149,19 @@ const VerifyForm = ({
   const pct = totalItems === 0 ? 100 : Math.round((checkedItems / totalItems) * 100);
 
   const handleSave = () => {
+    // Si hubo correcciones, actualizar el turno en Firestore
+    if (hasEdits) {
+      updateShift(shift.id, () => editedShift);
+    }
+
     const report = {
       id: existing?.id || Date.now(),
       type: 'shift',
       shiftId: shift.id,
-      date: shift.date,
-      worker: shift.worker,
-      island: shift.island,
-      shift: shift.shift,
+      date: editedShift.date,
+      worker: editedShift.worker,
+      island: editedShift.island,
+      shift: editedShift.shift,
       verifiedAt: new Date().toISOString(),
       items,
       cashReceived: cashNum,
@@ -132,6 +172,7 @@ const VerifyForm = ({
       collectedGallons: totalGallons - lentGallons,
       checkedItems,
       totalItems,
+      corrected: hasEdits,
     };
     existing ? updateVerifiedReport(existing.id, () => report) : addVerifiedReport(report);
     setVerifyTarget(null);
@@ -245,6 +286,151 @@ const VerifyForm = ({
         </Card>
       )}
 
+      {/* ── CORRECCIONES AL TURNO ── */}
+      <Card>
+        <div
+          style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          onClick={() => setShowEditor(v => !v)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="card-header" style={{ marginBottom: 0 }}>✏️ Corregir datos del turno</span>
+            {hasEdits && (
+              <span style={{ fontSize: 11, background: '#92400e', color: '#fde68a', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>
+                ● DATOS CORREGIDOS
+              </span>
+            )}
+          </div>
+          <span style={{ fontSize: 16, color: '#64748b' }}>{showEditor ? '▲' : '▼'}</span>
+        </div>
+        <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>
+          Si encontraste un error (número mal escrito, gasto que faltaba, crédito incorrecto), corrígelo aquí.
+          El balance se recalcula automáticamente.
+        </div>
+
+        {showEditor && (
+          <div style={{ marginTop: 20 }}>
+
+            {/* Gastos */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8' }}>🧾 GASTOS</span>
+                <Btn className="btn-sm" onClick={() => setEditedExpenses(prev => [...prev, { detail: '', amount: 0 }])}>
+                  + Agregar gasto
+                </Btn>
+              </div>
+              {editedExpenses.length === 0 && (
+                <p style={{ fontSize: 13, color: '#475569' }}>Sin gastos. Toca "Agregar gasto" para añadir uno.</p>
+              )}
+              {editedExpenses.map((e, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                  <input
+                    className="input-field" style={{ flex: 1 }} placeholder="Detalle del gasto"
+                    value={e.detail}
+                    onChange={ev => setEditedExpenses(prev => prev.map((x, j) => j === i ? { ...x, detail: ev.target.value } : x))}
+                  />
+                  <input
+                    className="input-field" type="number" step="0.01" style={{ width: 110 }} placeholder="0.00"
+                    value={e.amount}
+                    onChange={ev => setEditedExpenses(prev => prev.map((x, j) => j === i ? { ...x, amount: ev.target.value } : x))}
+                  />
+                  <Btn variant="danger" className="btn-icon"
+                    onClick={() => setEditedExpenses(prev => prev.filter((_, j) => j !== i))}>
+                    🗑️
+                  </Btn>
+                </div>
+              ))}
+              {editedExpenses.length > 0 && (
+                <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#ef4444', marginTop: 4 }}>
+                  Total gastos: {formatCurrency(editedExpenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0))}
+                </div>
+              )}
+            </div>
+
+            {/* Créditos */}
+            {items.credits.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>
+                  📋 CRÉDITOS — corregir galones si hay error
+                </div>
+                {items.credits.map((c) => (
+                  <div key={c._id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <ProductTag product={c.product} />
+                    <span style={{ flex: 1, fontSize: 13, color: '#94a3b8' }}>{c.client || '—'}</span>
+                    <input
+                      className="input-field" type="number" step="0.001" style={{ width: 120 }} placeholder="Galones"
+                      value={c.gallons}
+                      onChange={ev => updateItemField('credits', c._id, 'gallons', ev.target.value)}
+                    />
+                    <span style={{ fontSize: 12, color: '#f59e0b', width: 80, textAlign: 'right' }}>
+                      = {formatCurrency((parseFloat(c.gallons) || 0) * (prices[c.product] || 0))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pagos electrónicos */}
+            {items.payments.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>
+                  💳 PAGOS ELECTRÓNICOS — corregir monto si hay error
+                </div>
+                {items.payments.map((p) => (
+                  <div key={p._id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, background: '#1e3a5f', color: '#93c5fd', padding: '4px 8px', borderRadius: 6, minWidth: 90, textAlign: 'center' }}>
+                      {p.method}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 13, color: '#94a3b8' }}>{p.reference || '—'}</span>
+                    <input
+                      className="input-field" type="number" step="0.01" style={{ width: 120 }} placeholder="0.00"
+                      value={p.amount}
+                      onChange={ev => updateItemField('payments', p._id, 'amount', ev.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Contómetros */}
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>
+                ⛽ CONTÓMETROS — corregir lectura final si está mal escrita
+              </div>
+              {island?.faces?.map(face => (
+                <div key={face.id} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: '#475569', marginBottom: 6 }}>{face.label}</div>
+                  {face.dispensers.map(d => {
+                    const m = editedMeters[d.key] || { start: 0, end: null };
+                    const gal = Math.max(0, (parseFloat(m.end || 0) - parseFloat(m.start || 0)));
+                    return (
+                      <div key={d.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                        <ProductTag product={d.product} />
+                        <span style={{ fontSize: 12, color: '#64748b', width: 60 }}>{d.label}</span>
+                        <span style={{ fontSize: 12, color: '#475569', flex: 1 }}>
+                          Inicio: <strong>{parseFloat(m.start || 0).toFixed(3)}</strong>
+                        </span>
+                        <input
+                          className="input-field" type="number" step="0.001" style={{ width: 140 }}
+                          placeholder="Lectura final"
+                          value={m.end !== null && m.end !== '' ? m.end : ''}
+                          onChange={ev => setEditedMeters(prev => ({
+                            ...prev,
+                            [d.key]: { ...(prev[d.key] || { start: 0 }), end: ev.target.value },
+                          }))}
+                        />
+                        <span style={{ fontSize: 12, color: '#34d399', width: 80, textAlign: 'right' }}>
+                          = {formatCurrency(gal * (prices[d.product] || 0))}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
       <Card>
         <div className="card-header">📝 Observaciones</div>
         <textarea className="input-field" rows={3}
@@ -256,7 +442,7 @@ const VerifyForm = ({
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
         <Btn variant="ghost" style={{ padding: '12px 24px' }} onClick={handleCancel}>Cancelar</Btn>
         <Btn variant="success" style={{ padding: '12px 32px', fontSize: 16, fontWeight: 800 }} onClick={handleSave}>
-          ✅ Guardar Verificación
+          ✅ {hasEdits ? 'Guardar correcciones y verificar' : 'Guardar Verificación'}
         </Btn>
       </div>
     </div>
@@ -268,7 +454,7 @@ const VerifyForm = ({
 // ══════════════════════════════════════════════
 const VerifyDayForm = ({
   verifyTarget, setVerifyTarget, setCurrentPage,
-  addVerifiedReport, updateVerifiedReport, verifiedReports, prices,
+  addVerifiedReport, updateVerifiedReport, verifiedReports, prices, updateShift,
 }) => {
   const { shifts, date, editingId } = verifyTarget;
   const existing = editingId ? verifiedReports.find(r => r.id === editingId) : null;
@@ -313,6 +499,49 @@ const VerifyDayForm = ({
 
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [expanded, setExpanded] = useState({ 'Mañana': true, 'Tarde': true, 'Noche': true });
+
+  // ── Datos editables por turno (gastos + contómetros) ──
+  const [editedShiftsData, setEditedShiftsData] = useState(() =>
+    shifts.map(s => ({
+      expenses: JSON.parse(JSON.stringify(s.expenses || [])),
+      meters:   JSON.parse(JSON.stringify(s.meters   || {})),
+    }))
+  );
+  const [showEditorFor, setShowEditorFor] = useState(null); // shiftIdx o null
+
+  // Editar campo de ítem dentro del grupo (créditos, pagos)
+  const updateGroupItemField = (shiftName, section, id, field, val) => {
+    setGroupStates(prev => ({
+      ...prev,
+      [shiftName]: {
+        ...prev[shiftName],
+        items: {
+          ...prev[shiftName].items,
+          [section]: prev[shiftName].items[section].map(item =>
+            item._id === id ? { ...item, [field]: val } : item
+          ),
+        },
+      },
+    }));
+  };
+
+  // Turno efectivo (con correcciones)
+  const effectiveShifts = useMemo(() =>
+    shifts.map((s, i) => {
+      const gs = groupStates[s.shift];
+      const ed = editedShiftsData[i];
+      return {
+        ...s,
+        payments:   gs.items.payments.filter(p => p._shiftIdx === i).map(({ _id, _shiftIdx, _worker, verified, ...r }) => r),
+        credits:    gs.items.credits.filter(c => c._shiftIdx === i).map(({ _id, _shiftIdx, _worker, verified, ...r }) => r),
+        promotions: gs.items.promotions.filter(p => p._shiftIdx === i).map(({ _id, _shiftIdx, _worker, verified, ...r }) => r),
+        discounts:  gs.items.discounts.filter(d => d._shiftIdx === i).map(({ _id, _shiftIdx, _worker, verified, ...r }) => r),
+        expenses: ed.expenses,
+        meters:   ed.meters,
+      };
+    }),
+    [shifts, groupStates, editedShiftsData]
+  );
 
   // Alternar verificación de un ítem dentro de un grupo
   const toggleGroupItem = (shiftName, section, id) => {
@@ -359,13 +588,13 @@ const VerifyDayForm = ({
     setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
-  // Cálculos por turno individual (lectura)
+  // Cálculos por turno individual — usa effectiveShifts para reflejar correcciones
   const shiftBalances = useMemo(() =>
-    shifts.map(s => ({
+    effectiveShifts.map(s => ({
       balance: calcShiftBalance(s, prices),
       salesByProduct: calcSalesByProduct(s, prices),
     })),
-    [shifts, prices]
+    [effectiveShifts, prices]
   );
 
   const totalSalesAll = shiftBalances.reduce((sum, { balance }) => sum + balance.totalSales, 0);
@@ -411,14 +640,23 @@ const VerifyDayForm = ({
   const pct = totalItems === 0 ? 100 : Math.round((checkedItems / totalItems) * 100);
 
   const handleSave = () => {
-    const shiftReports = shifts.map((s, i) => {
+    // Guardar correcciones en Firestore para cada turno editado
+    effectiveShifts.forEach((eff, i) => {
+      const orig = shifts[i];
+      if (JSON.stringify(eff) !== JSON.stringify(orig)) {
+        updateShift(orig.id, () => eff);
+      }
+    });
+
+    const shiftReports = effectiveShifts.map((eff, i) => {
+      const s = shifts[i];
       const gs = groupStates[s.shift];
-      // Extraer ítems que pertenecen a este turno específico y limpiar campos internos
+      // Extraer ítems de este turno con verificación, sin campos internos
       const shiftItems = {
-        payments:   gs.items.payments.filter(p => p._shiftIdx === i).map(({ _shiftIdx, _worker, ...rest }) => rest),
-        credits:    gs.items.credits.filter(c => c._shiftIdx === i).map(({ _shiftIdx, _worker, ...rest }) => rest),
-        promotions: gs.items.promotions.filter(p => p._shiftIdx === i).map(({ _shiftIdx, _worker, ...rest }) => rest),
-        discounts:  gs.items.discounts.filter(d => d._shiftIdx === i).map(({ _shiftIdx, _worker, ...rest }) => rest),
+        payments:   gs.items.payments.filter(p => p._shiftIdx === i).map(({ _id, _shiftIdx, _worker, ...rest }) => rest),
+        credits:    gs.items.credits.filter(c => c._shiftIdx === i).map(({ _id, _shiftIdx, _worker, ...rest }) => rest),
+        promotions: gs.items.promotions.filter(p => p._shiftIdx === i).map(({ _id, _shiftIdx, _worker, ...rest }) => rest),
+        discounts:  gs.items.discounts.filter(d => d._shiftIdx === i).map(({ _id, _shiftIdx, _worker, ...rest }) => rest),
       };
       const { balance, salesByProduct } = shiftBalances[i];
       const galTurno = Object.values(salesByProduct).reduce((sum, v) => sum + v.gallons, 0);
@@ -433,6 +671,7 @@ const VerifyDayForm = ({
         totalGallons: galTurno, lentGallons: lent, collectedGallons: galTurno - lent,
         checkedItems: allShiftItems.filter(it => it.verified !== null).length,
         totalItems: allShiftItems.length,
+        corrected: JSON.stringify(eff) !== JSON.stringify(shifts[i]),
       };
     });
 
@@ -739,6 +978,122 @@ const VerifyDayForm = ({
                     Ningún turno de {shiftName} tiene pagos, créditos, promociones ni descuentos que verificar.
                   </p>
                 )}
+
+                {/* ── Correcciones por turno ── */}
+                <div style={{ marginTop: 16, borderTop: '1px solid #1e293b', paddingTop: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginBottom: 12 }}>
+                    ✏️ Correcciones por turno
+                  </div>
+                  {indices.map(idx => {
+                    const s = shifts[idx];
+                    const islandName = ISLANDS_CONFIG.find(il => il.id.toString() === s.island)?.name;
+                    const isOpen2 = showEditorFor === idx;
+                    const ed = editedShiftsData[idx];
+                    const hasShiftEdits = JSON.stringify(effectiveShifts[idx]) !== JSON.stringify(s);
+                    const groupCredits = gs.items.credits.filter(c => c._shiftIdx === idx);
+                    const groupPayments = gs.items.payments.filter(p => p._shiftIdx === idx);
+                    return (
+                      <div key={idx} style={{ marginBottom: 10, background: '#0f172a', borderRadius: 10, padding: 12 }}>
+                        <div
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                          onClick={() => setShowEditorFor(isOpen2 ? null : idx)}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>{s.worker}</span>
+                            <span style={{ fontSize: 12, color: '#64748b' }}>· {islandName}</span>
+                            {hasShiftEdits && (
+                              <span style={{ fontSize: 10, background: '#92400e', color: '#fde68a', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                CORREGIDO
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 13, color: '#475569' }}>{isOpen2 ? '▲' : '▼ editar'}</span>
+                        </div>
+
+                        {isOpen2 && (
+                          <div style={{ marginTop: 14 }}>
+                            {/* Gastos */}
+                            <div style={{ marginBottom: 14 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🧾 GASTOS</span>
+                                <Btn className="btn-sm" onClick={() =>
+                                  setEditedShiftsData(prev => prev.map((x, j) => j === idx
+                                    ? { ...x, expenses: [...x.expenses, { detail: '', amount: 0 }] }
+                                    : x))
+                                }>
+                                  + Agregar
+                                </Btn>
+                              </div>
+                              {ed.expenses.length === 0 && (
+                                <p style={{ fontSize: 12, color: '#475569' }}>Sin gastos.</p>
+                              )}
+                              {ed.expenses.map((e, ei) => (
+                                <div key={ei} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                                  <input className="input-field" style={{ flex: 1, fontSize: 13 }} placeholder="Detalle"
+                                    value={e.detail}
+                                    onChange={ev => setEditedShiftsData(prev => prev.map((x, j) => j === idx
+                                      ? { ...x, expenses: x.expenses.map((ex, k) => k === ei ? { ...ex, detail: ev.target.value } : ex) }
+                                      : x))}
+                                  />
+                                  <input className="input-field" type="number" step="0.01" style={{ width: 100, fontSize: 13 }} placeholder="0.00"
+                                    value={e.amount}
+                                    onChange={ev => setEditedShiftsData(prev => prev.map((x, j) => j === idx
+                                      ? { ...x, expenses: x.expenses.map((ex, k) => k === ei ? { ...ex, amount: ev.target.value } : ex) }
+                                      : x))}
+                                  />
+                                  <Btn variant="danger" className="btn-icon" onClick={() =>
+                                    setEditedShiftsData(prev => prev.map((x, j) => j === idx
+                                      ? { ...x, expenses: x.expenses.filter((_, k) => k !== ei) }
+                                      : x))
+                                  }>🗑️</Btn>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Créditos del turno */}
+                            {groupCredits.length > 0 && (
+                              <div style={{ marginBottom: 14 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>📋 CRÉDITOS — corregir galones</div>
+                                {groupCredits.map(c => (
+                                  <div key={c._id} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                                    <ProductTag product={c.product} />
+                                    <span style={{ flex: 1, fontSize: 12, color: '#94a3b8' }}>{c.client || '—'}</span>
+                                    <input className="input-field" type="number" step="0.001" style={{ width: 110, fontSize: 13 }}
+                                      value={c.gallons}
+                                      onChange={ev => updateGroupItemField(shiftName, 'credits', c._id, 'gallons', ev.target.value)}
+                                    />
+                                    <span style={{ fontSize: 12, color: '#f59e0b', width: 72, textAlign: 'right' }}>
+                                      = {formatCurrency((parseFloat(c.gallons) || 0) * (prices[c.product] || 0))}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Pagos del turno */}
+                            {groupPayments.length > 0 && (
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>💳 PAGOS — corregir monto</div>
+                                {groupPayments.map(p => (
+                                  <div key={p._id} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                                    <span style={{ fontSize: 11, background: '#1e3a5f', color: '#93c5fd', padding: '3px 8px', borderRadius: 6, minWidth: 70, textAlign: 'center' }}>
+                                      {p.method}
+                                    </span>
+                                    <span style={{ flex: 1, fontSize: 12, color: '#94a3b8' }}>{p.reference || '—'}</span>
+                                    <input className="input-field" type="number" step="0.01" style={{ width: 110, fontSize: 13 }}
+                                      value={p.amount}
+                                      onChange={ev => updateGroupItemField(shiftName, 'payments', p._id, 'amount', ev.target.value)}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             )}
           </Card>
