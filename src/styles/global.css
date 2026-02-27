@@ -1,0 +1,738 @@
+/* ============================================
+   ESTILOS GLOBALES - GRIFO CONTROL DE VENTAS
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  background: #0c0f1a;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+/* ---- SCROLLBAR ---- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ---- LAYOUT ---- */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  margin-left: 250px;
+  padding: 24px 32px;
+  flex: 1;
+  min-height: 100vh;
+}
+
+/* ---- CARD ---- */
+.card {
+  background: linear-gradient(135deg, #1e293b 0%, #1a2332 100%);
+  border-radius: 16px;
+  border: 1px solid #2d3a4f;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f1f5f9;
+}
+
+/* ---- QUITAR FLECHAS DE INPUTS NUMÉRICOS ---- */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ---- INPUTS ---- */
+.input-field {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.input-field:focus {
+  border-color: #6366f1;
+}
+
+.input-field::placeholder {
+  color: #475569;
+}
+
+.select-field {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ---- BUTTONS ---- */
+.btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btn-primary {
+  background: #6366f1;
+  color: #fff;
+}
+
+.btn-success {
+  background: #059669;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #334155;
+}
+
+.btn-ghost:hover {
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
+.btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-icon {
+  padding: 8px;
+}
+
+/* ---- TABLE ---- */
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+.data-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table td {
+  padding: 10px 14px;
+  background: #0f172a;
+  font-size: 14px;
+}
+
+.data-table td:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.data-table td:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+/* ---- BADGE ---- */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-admin {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.badge-worker {
+  background: rgba(5, 150, 105, 0.2);
+  color: #6ee7b7;
+}
+
+.badge-open {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.badge-closed {
+  background: rgba(5, 150, 105, 0.2);
+  color: #6ee7b7;
+}
+
+/* ---- PRODUCT TAGS ---- */
+.product-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tag-bio {
+  background: #065f46;
+  color: #ecfdf5;
+}
+
+.tag-regular {
+  background: #1e40af;
+  color: #eff6ff;
+}
+
+.tag-premium {
+  background: #9f1239;
+  color: #fff1f2;
+}
+
+.tag-glp {
+  background: #b45309;
+  color: #fffbeb;
+}
+
+/* ---- STAT CARD ---- */
+.stat-card {
+  padding: 20px;
+  margin-bottom: 0;
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-card .stat-value {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+/* ---- GRIDS ---- */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+/* ---- UTILITY ---- */
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.text-muted {
+  color: #64748b;
+}
+
+.text-primary {
+  color: #6366f1;
+}
+
+.text-success {
+  color: #34d399;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+.text-warning {
+  color: #f59e0b;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-extra-bold {
+  font-weight: 800;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+
+/* ---- MODAL ---- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #1e293b;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 520px;
+  width: 90%;
+  border: 1px solid #334155;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ---- TABS ---- */
+.tabs-container {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding: 4px;
+  background: #111827;
+  border-radius: 12px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  white-space: nowrap;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.tab-btn.active {
+  background: #6366f1;
+  color: #fff;
+}
+
+.tab-btn:hover:not(.active) {
+  background: rgba(99, 102, 241, 0.1);
+  color: #a5b4fc;
+}
+
+/* ---- CUADRE ---- */
+.cuadre-box {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.cuadre-ok {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.1));
+  border-color: #059669;
+}
+
+.cuadre-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
+  border-color: #ef4444;
+}
+
+/* ---- SUMMARY BOX ---- */
+.summary-section {
+  padding: 24px;
+  background: #0f172a;
+  border-radius: 16px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.summary-row-border {
+  border-bottom: 1px solid #1e293b;
+}
+
+.summary-divider {
+  border-top: 2px solid #334155;
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-5 { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ====================================================
+   MOBILE — pantallas hasta 768px
+   ==================================================== */
+@media (max-width: 768px) {
+
+  /* ---- Layout principal ---- */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 12px 14px 90px; /* padding-bottom para bottom nav */
+  }
+
+  /* ---- Hamburger visible en mobile ---- */
+  .hamburger-btn {
+    display: flex !important;
+  }
+
+  /* ---- Sidebar: oculto por defecto, desliza como overlay ---- */
+  .sidebar {
+    transform: translateX(-260px);
+    transition: transform 0.28s ease;
+    box-shadow: none;
+  }
+  .sidebar.sidebar-mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.6);
+  }
+
+  /* ---- Overlay oscuro detrás del sidebar ---- */
+  .sidebar-overlay {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+  }
+
+  /* ---- Botón cerrar dentro del sidebar ---- */
+  .sidebar-close-btn {
+    display: flex !important;
+  }
+
+  /* ---- Grids apilados ---- */
+  .grid-2, .grid-3, .grid-4, .grid-5 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- Tarjetas más compactas ---- */
+  .card {
+    padding: 16px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* ---- Inputs más grandes (evita zoom en iOS) ---- */
+  .input-field, .select-field {
+    font-size: 16px !important;
+    padding: 12px 14px;
+  }
+
+  /* ---- Botones con área táctil mínima ---- */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 38px; padding: 8px 14px; }
+
+  /* ---- Tablas: scroll horizontal ---- */
+  .card > .data-table,
+  .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { font-size: 12px; min-width: 480px; }
+
+  /* ---- Modales: salen desde abajo ---- */
+  .modal-overlay { align-items: flex-end; }
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 22px 22px 0 0 !important;
+    max-height: 90vh !important;
+    padding: 20px 16px 28px;
+  }
+
+  /* ---- flex-between apila en mobile ---- */
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .mobile-stack > * { width: 100%; }
+
+  /* ---- Tabs scrollables sin barra ---- */
+  .tabs-container {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs-container::-webkit-scrollbar { display: none; }
+  .tab-btn { min-width: 88px; font-size: 12px; padding: 7px 12px; }
+
+  /* ---- Títulos más pequeños ---- */
+  h2 { font-size: 22px !important; }
+
+  /* ---- Padding-top para no tapar contenido con el hamburger ---- */
+  .main-content {
+    padding-top: 64px !important;
+  }
+}
+
+/* ============================================
+   IMPRESIÓN — se activa con window.print()
+   Solo muestra el contenido de #print-area
+   ============================================ */
+.no-print { /* visible en pantalla, oculto al imprimir */ }
+
+/* Área de impresión de reportes: oculta en pantalla, visible al imprimir */
+#report-print-area { display: none; }
+
+@media print {
+  /* Tamaño y márgenes de página */
+  @page {
+    size: A4;
+    margin: 1.2cm 1.5cm;
+  }
+
+  /* Fondo blanco y texto negro para ahorrar tinta */
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  /* Ocultar sidebar, botones, tabs y todo lo que no es el reporte */
+  .sidebar,
+  .no-print,
+  .tabs-container,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  /* Mostrar el área de reporte al imprimir */
+  #report-print-area {
+    display: block !important;
+  }
+
+  /* El contenido principal sin margen ni padding extra */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Cards con borde simple — evitar corte entre páginas */
+  .card {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 6px !important;
+    padding: 8px 10px !important;
+  }
+
+  .card-header {
+    color: #111111 !important;
+    border-bottom: 1px solid #cccccc;
+    padding-bottom: 5px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* Tablas más compactas */
+  .data-table td,
+  .data-table th {
+    padding: 4px 6px !important;
+  }
+
+  .data-table td {
+    background: #f9f9f9 !important;
+    color: #111111 !important;
+    border-bottom: 1px solid #eeeeee;
+    font-size: 10px;
+  }
+
+  .data-table th {
+    color: #555555 !important;
+    font-size: 9px;
+  }
+
+  /* Colores de texto neutrales al imprimir */
+  .text-primary, .text-success, .text-warning,
+  .text-danger, .text-muted {
+    color: #333333 !important;
+  }
+
+  /* Product tags en blanco y negro */
+  .product-tag {
+    border: 1px solid #666 !important;
+    background: #eeeeee !important;
+    color: #111111 !important;
+    font-size: 9px !important;
+    padding: 1px 6px !important;
+  }
+
+  .summary-section {
+    background: #f5f5f5 !important;
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  .summary-row {
+    border-bottom: 1px solid #eeeeee;
+    padding: 4px 0 !important;
+    font-size: 10px;
+  }
+
+  .summary-divider {
+    padding-top: 6px !important;
+    margin-top: 4px !important;
+  }
+
+  /* Cuadre OK/error en colores suaves para impresión */
+  .cuadre-ok {
+    background: #e8f5e9 !important;
+    border-color: #388e3c !important;
+    padding: 8px 12px !important;
+    margin-top: 8px !important;
+  }
+
+  .cuadre-error {
+    background: #ffebee !important;
+    border-color: #c62828 !important;
+    padding: 8px 12px !important;
+    margin-top: 8px !important;
+  }
+
+  h2, h3, strong {
+    color: #111111 !important;
+  }
+
+  /* Grids siguen funcionando en impresión */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  /* Fuente de encabezado principal más pequeña */
+  h2 { font-size: 14px !important; margin-bottom: 4px !important; }
+  h3 { font-size: 12px !important; }
+}
