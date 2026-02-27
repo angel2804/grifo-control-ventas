@@ -32,14 +32,18 @@ const AdminReportsPage = () => {
     payments: true, credits: true, promotions: false, discounts: false, expenses: true,
   });
   const [showBell, setShowBell] = useState(false);
+  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
 
-  // Turnos cerrados que no cuadran
+  const dismissAlert = (id) => setDismissedAlerts(prev => new Set([...prev, id]));
+
+  // Turnos cerrados que no cuadran y no fueron descartados
   const unbalancedShifts = useMemo(() =>
     shifts.filter(s =>
       s.status === 'closed' &&
+      !dismissedAlerts.has(s.id) &&
       Math.abs(calcShiftBalance(s, prices).difference) >= 0.01
     ),
-    [shifts, prices]
+    [shifts, prices, dismissedAlerts]
   );
 
   const dayShifts = useMemo(() => shifts.filter(s => s.date === date), [shifts, date]);
@@ -141,35 +145,50 @@ const AdminReportsPage = () => {
                         return (
                           <div
                             key={s.id}
-                            onClick={() => {
-                              setDate(s.date);
-                              setShiftTab(s.shift);
-                              setIslandTab(s.island);
-                              setShowBell(false);
-                            }}
                             style={{
-                              cursor: 'pointer', borderRadius: 10, padding: '10px 12px',
+                              borderRadius: 10, padding: '10px 12px',
                               background: '#0f172a', border: '1px solid #334155',
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              transition: 'border-color 0.15s',
+                              display: 'flex', alignItems: 'center', gap: 8,
                             }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = '#ef4444'}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = '#334155'}
                           >
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 700 }}>{s.worker}</div>
-                              <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                                {s.date} · {s.shift} · Isla {s.island}
+                            {/* Info clickeable */}
+                            <div
+                              style={{ flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                              onClick={() => {
+                                setDate(s.date);
+                                setShiftTab(s.shift);
+                                setIslandTab(s.island);
+                                setShowBell(false);
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700 }}>{s.worker}</div>
+                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                                  {s.date} · {s.shift} · Isla {s.island}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right', marginRight: 4 }}>
+                                <div style={{ fontSize: 14, fontWeight: 900, color: '#ef4444' }}>
+                                  {diff < 0 ? '▼ FALTA' : '▲ SOBRA'}
+                                </div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#fca5a5' }}>
+                                  {formatCurrency(Math.abs(diff))}
+                                </div>
                               </div>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: 14, fontWeight: 900, color: '#ef4444' }}>
-                                {diff < 0 ? '▼ FALTA' : '▲ SOBRA'}
-                              </div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#fca5a5' }}>
-                                {formatCurrency(Math.abs(diff))}
-                              </div>
-                            </div>
+                            {/* Botón descartar */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); dismissAlert(s.id); }}
+                              title="Descartar alerta"
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#475569', fontSize: 16, lineHeight: 1,
+                                padding: '4px', borderRadius: 6, flexShrink: 0,
+                                transition: 'color 0.15s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.color = '#e2e8f0'}
+                              onMouseLeave={e => e.currentTarget.style.color = '#475569'}
+                            >✕</button>
                           </div>
                         );
                       })}
