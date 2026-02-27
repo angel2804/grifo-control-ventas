@@ -52,16 +52,30 @@ const ShiftOpenView = ({
   return (
     <div>
       {/* Header */}
-      <div className="flex-between">
+      <div className="flex-between" style={{ flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>Mi Turno</h2>
-          <p className="text-muted">
+          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Mi Turno</h2>
+          <p className="text-muted" style={{ fontSize: 13 }}>
             {shift.date} — {shift.shift} — {islandConfig?.name || `Isla ${shift.island}`}
           </p>
         </div>
+        {/* Desktop: botón en el header */}
         <Btn
           variant="danger"
+          className="shift-close-desktop"
           style={{ padding: '12px 24px', fontSize: 15, fontWeight: 700 }}
+          onClick={() => setConfirmClose(true)}
+        >
+          🔴 Cerrar Turno
+        </Btn>
+      </div>
+
+      {/* Mobile: botón fijo en la parte inferior */}
+      <div className="shift-close-mobile">
+        <Btn
+          variant="danger"
+          className="btn-full"
+          style={{ fontSize: 16, fontWeight: 800, minHeight: 52 }}
           onClick={() => setConfirmClose(true)}
         >
           🔴 Cerrar Turno

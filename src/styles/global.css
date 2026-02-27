@@ -481,6 +481,14 @@ input[type=number] {
   margin-top: 8px;
 }
 
+/* ---- Botón cerrar turno: comportamiento por breakpoint ---- */
+.shift-close-mobile { display: none; }
+.shift-close-desktop { display: inline-flex; }
+
+/* ---- Ocultar/mostrar por breakpoint ---- */
+.hide-mobile { display: block; }
+.show-mobile { display: none !important; }
+
 /* ---- RESPONSIVE ---- */
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: 1fr 1fr; }
@@ -529,17 +537,30 @@ input[type=number] {
     display: flex !important;
   }
 
-  /* ---- Grids apilados ---- */
-  .grid-2, .grid-3, .grid-4, .grid-5 {
+  /* ---- Grids: grid-4 → 2×2, el resto apilado ---- */
+  .grid-2, .grid-3, .grid-5 {
     grid-template-columns: 1fr !important;
+  }
+  .grid-4 {
+    grid-template-columns: 1fr 1fr !important;
   }
 
   /* ---- Tarjetas más compactas ---- */
   .card {
-    padding: 16px;
+    padding: 14px;
     border-radius: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
+
+  .card-header {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  /* ---- Stat cards más compactas ---- */
+  .stat-card { padding: 12px 14px; }
+  .stat-card .stat-value { font-size: 18px; }
+  .stat-card .stat-label { font-size: 11px; }
 
   /* ---- Inputs más grandes (evita zoom en iOS) ---- */
   .input-field, .select-field {
@@ -549,12 +570,12 @@ input[type=number] {
 
   /* ---- Botones con área táctil mínima ---- */
   .btn { min-height: 44px; }
-  .btn-sm { min-height: 38px; padding: 8px 14px; }
+  .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 12px; }
 
-  /* ---- Tablas: scroll horizontal ---- */
+  /* ---- Tablas: scroll horizontal solo si es necesario ---- */
   .card > .data-table,
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .data-table { font-size: 12px; min-width: 480px; }
+  .data-table { font-size: 12px; min-width: 0; }
 
   /* ---- Modales: salen desde abajo ---- */
   .modal-overlay { align-items: flex-end; }
@@ -562,8 +583,8 @@ input[type=number] {
     width: 100% !important;
     max-width: 100% !important;
     border-radius: 22px 22px 0 0 !important;
-    max-height: 90vh !important;
-    padding: 20px 16px 28px;
+    max-height: 92vh !important;
+    padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
   }
 
   /* ---- flex-between apila en mobile ---- */
@@ -580,17 +601,35 @@ input[type=number] {
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
+    padding: 3px;
   }
   .tabs-container::-webkit-scrollbar { display: none; }
-  .tab-btn { min-width: 88px; font-size: 12px; padding: 7px 12px; }
+  .tab-btn { min-width: 80px; font-size: 11px; padding: 7px 10px; }
 
   /* ---- Títulos más pequeños ---- */
-  h2 { font-size: 22px !important; }
+  h2 { font-size: 20px !important; }
 
   /* ---- Padding-top para no tapar contenido con el hamburger ---- */
   .main-content {
     padding-top: 64px !important;
   }
+
+  /* ---- Botón cerrar turno: visible solo en desktop ---- */
+  .shift-close-desktop { display: none !important; }
+
+  /* ---- Barra inferior fija "Cerrar Turno" en mobile ---- */
+  .shift-close-mobile {
+    display: block;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(12,15,26,0.98) 75%, transparent);
+    z-index: 50;
+  }
+
+  /* ---- Ocultar/mostrar por breakpoint ---- */
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
 }
 
 /* ============================================
