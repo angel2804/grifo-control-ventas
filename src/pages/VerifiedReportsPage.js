@@ -501,7 +501,7 @@ const PrintVerifiedReport = ({ report, allShifts, prices, mode, sections }) => {
   const creditNo      = allCreditsV.filter(c => c.verified === false).length;
   const promoGal      = allPromosV.reduce((s, p) => s + (parseFloat(p.gallons) || 0), 0);
   const promoAmt      = allPromosV.reduce((s, p) => s + (parseFloat(p.gallons) || 0) * (prices[p.product] || 0), 0);
-  const discountAmt   = allDiscountsV.reduce((s, d) => s + (parseFloat(d.gallons) || 0) * (parseFloat(d.price) || 0), 0);
+  const discountAmt   = allDiscountsV.reduce((s, d) => s + (parseFloat(d.gallons) || 0) * Math.max(0, (prices[d.product] || 0) - (parseFloat(d.price) || 0)), 0);
   const expensesTotal = originalShifts.reduce((sum, s) => sum + calcShiftBalance(s, prices).totalExpenses, 0);
   const delivTotal    = originalShifts.reduce((sum, s) => sum + (s.deliveries || []).reduce((s2, v) => s2 + (parseFloat(v) || 0), 0), 0);
 
@@ -805,7 +805,7 @@ const ShiftDetailedSections = ({ report, sections, prices }) => (
     {sections.discounts && (report.items?.discounts || []).length > 0 && (
       <PrintVerifTable title="🔻 DESCUENTOS"
         headers={['Producto', 'Cliente', 'Galones', 'Precio', 'Monto', 'Estado']}
-        rows={(report.items.discounts).map(d => [d.product, d.client || '—', formatGallons(parseFloat(d.gallons) || 0), formatCurrency(d.price), formatCurrency((parseFloat(d.gallons) || 0) * (parseFloat(d.price) || 0)), statusText(d.verified)])}
+        rows={(report.items.discounts).map(d => [d.product, d.client || '—', formatGallons(parseFloat(d.gallons) || 0), formatCurrency(d.price), formatCurrency((parseFloat(d.gallons) || 0) * Math.max(0, (prices[d.product] || 0) - (parseFloat(d.price) || 0))), statusText(d.verified)])}
         statusCol={5}
       />
     )}

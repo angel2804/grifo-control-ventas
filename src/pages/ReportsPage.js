@@ -931,7 +931,7 @@ const PrintShiftReport = ({ shift, island, prices, date, mode, sections }) => {
       {mode === 'detallado' && sections.discounts && (shift.discounts || []).length > 0 && (
         <PrintDetailTable title="🔻 DESCUENTOS"
           headers={['Producto', 'Cliente', 'Galones', 'Precio', 'Monto']}
-          rows={shift.discounts.map(d => [d.product, d.client || '—', formatGallons(parseFloat(d.gallons) || 0), formatCurrency(d.price), formatCurrency((parseFloat(d.gallons) || 0) * (parseFloat(d.price) || 0))])} />
+          rows={shift.discounts.map(d => [d.product, d.client || '—', formatGallons(parseFloat(d.gallons) || 0), formatCurrency(d.price), formatCurrency((parseFloat(d.gallons) || 0) * Math.max(0, (prices[d.product] || 0) - (parseFloat(d.price) || 0)))])} />
       )}
       {mode === 'detallado' && sections.expenses && (shift.expenses || []).length > 0 && (
         <PrintDetailTable title="🧾 GASTOS"

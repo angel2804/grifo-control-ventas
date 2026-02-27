@@ -130,7 +130,7 @@ export const calcShiftBalance = (shift, prices) => {
     0
   );
   const totalDiscounts = (shift.discounts || []).reduce(
-    (s, d) => s + (parseFloat(d.gallons) || 0) * (parseFloat(d.price) || 0),
+    (s, d) => s + (parseFloat(d.gallons) || 0) * Math.max(0, (prices[d.product] || 0) - (parseFloat(d.price) || 0)),
     0
   );
 

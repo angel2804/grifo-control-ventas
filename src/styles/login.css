@@ -1,92 +1,273 @@
 /* ============================================
-   LOGIN PAGE STYLES
+   LOGIN PAGE — Diseño moderno split-screen
    ============================================ */
 
+/* ── Layout base ── */
 .login-page {
   min-height: 100vh;
   display: flex;
+}
+
+/* ── Panel izquierdo: formulario ── */
+.login-left {
+  width: 460px;
+  flex-shrink: 0;
+  background: #0f172a;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0c0f1a 0%, #1a1035 50%, #0c0f1a 100%);
+  padding: 48px 40px;
+  position: relative;
+}
+
+/* Línea sutil derecha del panel */
+.login-left::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  right: 0;
+  height: 80%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #1e293b 30%, #1e293b 70%, transparent);
+}
+
+.login-form-wrapper {
+  width: 100%;
+  max-width: 340px;
+}
+
+/* ── Logo / Marca ── */
+.login-brand {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.login-logo-box {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  margin: 0 auto 14px;
+  background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+  box-shadow: 0 8px 28px rgba(5, 150, 105, 0.40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
 
-.login-glow-1 {
+/* Emoji fallback */
+.login-logo-fallback {
+  font-size: 34px;
+  line-height: 1;
   position: absolute;
-  top: 20%;
-  left: 10%;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
-  filter: blur(60px);
 }
 
-.login-glow-2 {
+/* Imagen de logo (superpuesta sobre el emoji) */
+.login-logo-img {
   position: absolute;
-  bottom: 15%;
-  right: 15%;
-  width: 250px;
-  height: 250px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.1), transparent 70%);
-  filter: blur(50px);
-}
-
-.login-card {
-  background: linear-gradient(135deg, #1e293b, #1a2332);
-  border-radius: 24px;
-  padding: 48px;
-  width: 420px;
-  border: 1px solid #2d3a4f;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-  position: relative;
-  z-index: 1;
-}
-
-.login-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.login-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  margin: 0 auto 16px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 22px;
 }
 
 .login-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
+  color: #f1f5f9;
   letter-spacing: -0.02em;
+  margin: 0;
 }
 
 .login-subtitle {
-  color: #64748b;
-  margin-top: 8px;
-  font-size: 14px;
+  color: #475569;
+  font-size: 13px;
+  margin-top: 4px;
 }
 
-.login-error {
-  color: #f87171;
+/* ── Bienvenida ── */
+.login-welcome {
+  margin-bottom: 28px;
+}
+
+.login-welcome-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 4px;
+}
+
+.login-welcome-sub {
   font-size: 13px;
-  margin-bottom: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── Campos ── */
+.login-field {
+  margin-bottom: 18px;
+}
+
+.login-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.10em;
+  margin-bottom: 7px;
+}
+
+.login-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #1e293b;
+  border: 1.5px solid #334155;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 15px;
+  color: #f1f5f9;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.login-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.login-input::placeholder {
+  color: #334155;
+}
+
+/* ── Error ── */
+.login-error {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  color: #f87171;
+  font-size: 13px;
+  background: rgba(248, 113, 113, 0.07);
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
 }
 
-.login-demo {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 12px;
-  color: #475569;
+/* ── Botón ── */
+.login-btn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 20px rgba(5, 150, 105, 0.35);
+  transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+  margin-top: 4px;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(5, 150, 105, 0.45);
+}
+
+.login-btn:active {
+  transform: translateY(0px);
+  opacity: 0.92;
+}
+
+
+/* ══════════════════════════════════════════
+   Panel derecho — imagen de la empresa
+   ══════════════════════════════════════════ */
+.login-right {
+  flex: 1;
+  /* background-image se aplica como inline style en LoginPage.js */
+  background-size: cover;
+  background-position: center;
+  background-color: #071324;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Degradado decorativo de respaldo (visible si no hay imagen) */
+.login-right::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(5,150,105,0.20) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(13,148,136,0.15) 0%, transparent 55%),
+    linear-gradient(160deg, #071324 0%, #0a1e32 60%, #071324 100%);
+  z-index: 0;
+}
+
+/* Overlay oscuro sobre la imagen para legibilidad del texto */
+.login-right-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(0, 0, 0, 0.20) 0%,
+    rgba(0, 0, 0, 0.52) 100%
+  );
+  display: flex;
+  align-items: flex-end;
+  padding: 52px 48px;
+  z-index: 1;
+}
+
+.login-right-content {
+  color: #fff;
+  max-width: 400px;
+}
+
+.login-right-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6ee7b7;
+  background: rgba(5, 150, 105, 0.20);
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  border-radius: 20px;
+  padding: 5px 14px;
+  margin-bottom: 16px;
+}
+
+.login-right-title {
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: #fff;
+  margin: 0 0 14px;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+}
+
+.login-right-desc {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.70);
+  line-height: 1.75;
+  margin: 0;
+}
+
+/* ── Responsive: solo muestra formulario en móvil ── */
+@media (max-width: 768px) {
+  .login-left {
+    width: 100%;
+    padding: 40px 24px;
+  }
+  .login-left::after {
+    display: none;
+  }
+  .login-right {
+    display: none;
+  }
 }

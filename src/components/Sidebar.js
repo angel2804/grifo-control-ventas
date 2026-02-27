@@ -11,17 +11,23 @@ import '../styles/sidebar.css';
 // ============================================
 
 const Sidebar = () => {
-  const { currentUser, currentPage, setCurrentPage, logout, isAdmin, shifts, prices } = useApp();
+  const { currentUser, currentPage, setCurrentPage, logout, isAdmin, shifts, prices, verifiedReports } = useApp();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Cantidad de turnos cerrados con diferencia (para badge en "Reportes")
+  // Cantidad de turnos cerrados con diferencia y aún no verificados
   const unbalancedCount = useMemo(() => {
     if (!isAdmin) return 0;
+    const verifiedIds = new Set();
+    verifiedReports.forEach(r => {
+      if (r.type === 'shift') verifiedIds.add(r.shiftId);
+      else if (r.type === 'day') (r.shiftReports || []).forEach(sr => verifiedIds.add(sr.shiftId));
+    });
     return shifts.filter(s =>
       s.status === 'closed' &&
+      !verifiedIds.has(s.id) &&
       Math.abs(calcShiftBalance(s, prices).difference) >= 0.01
     ).length;
-  }, [isAdmin, shifts, prices]);
+  }, [isAdmin, shifts, prices, verifiedReports]);
 
   // Menú para administrador (sin Dashboard)
   const adminPages = [
